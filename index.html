@@ -129,6 +129,13 @@
             transform: translate(-50%, 0);
             opacity: 1;
         }
+        /* Hızlı Eylem Butonu Stilleri */
+        #add-transaction-icon.rotate-45 {
+            transform: rotate(45deg);
+        }
+        #quick-action-menu {
+            transition: transform 0.2s ease-out, opacity 0.2s ease-out;
+        }
     </style>
 </head>
 <body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200 transition-colors duration-300">
@@ -350,10 +357,20 @@
         </div>
     </div>
 
-    <!-- Sabit Ekle Butonu -->
-    <button id="add-transaction-btn" class="fixed bottom-8 right-8 bg-indigo-600 text-white rounded-full w-16 h-16 flex items-center justify-center shadow-lg hover:bg-indigo-700 transition-transform transform hover:scale-110 hidden">
-        <i class="fa-solid fa-plus text-2xl"></i>
-    </button>
+    <!-- Geliştirilmiş Sabit Ekle Butonu ve Hızlı Eylem Menüsü -->
+    <div class="fixed bottom-8 right-8 z-40">
+        <div id="quick-action-menu" class="flex flex-col items-center space-y-3 mb-3 transition-all duration-300 transform scale-0 opacity-0 origin-bottom">
+            <button id="quick-add-expense" class="bg-red-500 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg hover:bg-red-600 transition-transform transform hover:scale-110" title="Gider Ekle">
+                <i class="fa-solid fa-arrow-trend-down text-xl"></i>
+            </button>
+            <button id="quick-add-income" class="bg-green-500 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg hover:bg-green-600 transition-transform transform hover:scale-110" title="Gelir Ekle">
+                <i class="fa-solid fa-arrow-trend-up text-xl"></i>
+            </button>
+        </div>
+        <button id="add-transaction-btn" class="bg-indigo-600 text-white rounded-full w-16 h-16 flex items-center justify-center shadow-lg hover:bg-indigo-700 transition-transform transform hover:scale-110 hidden">
+            <i id="add-transaction-icon" class="fa-solid fa-plus text-2xl transition-transform duration-300"></i>
+        </button>
+    </div>
 
     <!-- Modallar -->
     <!-- YENİ: Tek İşlem Ekleme Modalı -->
@@ -664,6 +681,10 @@
         const transactionModal = document.getElementById('transaction-modal');
         const transactionForm = document.getElementById('transaction-form');
         const cancelTransactionBtn = document.getElementById('cancel-transaction-btn');
+        const addTransactionIcon = document.getElementById('add-transaction-icon');
+        const quickActionMenu = document.getElementById('quick-action-menu');
+        const quickAddIncomeBtn = document.getElementById('quick-add-income');
+        const quickAddExpenseBtn = document.getElementById('quick-add-expense');
 
 
         // --- UYGULAMA DURUMU (STATE) ---
@@ -739,7 +760,7 @@
                 document.getElementById('user-email-display').textContent = `Hoşgeldin, ${user.email}`;
                 authScreen.classList.add('hidden');
                 mainAppScreen.classList.remove('hidden');
-                addTransactionBtn.classList.remove('hidden'); // DÜZELTME
+                addTransactionBtn.classList.remove('hidden');
                 
                 toggleLoading(true);
                 initializeQuillEditor();
@@ -750,7 +771,7 @@
                 currentUserId = null;
                 authScreen.classList.remove('hidden');
                 mainAppScreen.classList.add('hidden');
-                addTransactionBtn.classList.add('hidden'); // DÜZELTME
+                addTransactionBtn.classList.add('hidden');
                 if (transactionsUnsubscribe) transactionsUnsubscribe();
                 if (categoriesUnsubscribe) categoriesUnsubscribe();
                 if (notesUnsubscribe) notesUnsubscribe();
@@ -878,9 +899,52 @@
 
         // --- İŞLEM YÖNETİMİ (TRANSACTIONS) ---
         
-        addTransactionBtn.addEventListener('click', () => {
-            transactionModal.classList.remove('hidden');
+        addTransactionBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            quickActionMenu.classList.toggle('scale-0');
+            quickActionMenu.classList.toggle('opacity-0');
+            addTransactionIcon.classList.toggle('rotate-45');
         });
+
+        function closeQuickActionMenu() {
+            quickActionMenu.classList.add('scale-0', 'opacity-0');
+            addTransactionIcon.classList.remove('rotate-45');
+        }
+
+        document.addEventListener('click', (e) => {
+            if (!addTransactionBtn.parentElement.contains(e.target)) {
+                closeQuickActionMenu();
+            }
+        });
+
+        quickAddIncomeBtn.addEventListener('click', () => {
+            openTransactionModalWithType('income');
+            closeQuickActionMenu();
+        });
+
+        quickAddExpenseBtn.addEventListener('click', () => {
+            openTransactionModalWithType('expense');
+            closeQuickActionMenu();
+        });
+
+        function openTransactionModalWithType(type) {
+            transactionForm.reset();
+            document.getElementById('transaction-type-selector').classList.add('hidden');
+            document.getElementById('expense-type-selector').classList.add('hidden');
+            document.querySelector('.form-fields').classList.add('hidden');
+            document.querySelectorAll('.transaction-type-btn, .expense-type-btn').forEach(btn => btn.classList.remove('active'));
+
+            transactionModal.classList.remove('hidden');
+
+            if (type === 'income') {
+                document.querySelector('.transaction-type-btn[data-type="income"]').classList.add('active');
+                setupTransactionForm('income');
+            } else if (type === 'expense') {
+                document.querySelector('.transaction-type-btn[data-type="expense"]').classList.add('active');
+                document.getElementById('expense-type-selector').classList.remove('hidden');
+            }
+        }
+
 
         function closeTransactionModal() {
             transactionModal.classList.add('hidden');
