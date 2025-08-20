@@ -2199,15 +2199,14 @@
                 const cardThemeClasses = getCardThemeClasses(card.cardTheme);
 
                 const cardEl = document.createElement('div');
-                cardEl.className = `p-5 rounded-xl shadow-lg text-white font-mono flex flex-col justify-between h-52 relative overflow-hidden transition-transform transform hover:scale-105 cursor-pointer ${cardThemeClasses}`;
-                cardEl.dataset.id = card.id;
-                
+                cardEl.className = `p-5 rounded-xl shadow-lg text-white font-mono flex flex-col justify-between h-52 relative overflow-hidden transition-transform transform hover:scale-105`;
                 cardEl.innerHTML = `
-                    <div class="flex justify-between items-start">
+                    <div class="absolute inset-0 ${cardThemeClasses} opacity-80"></div>
+                    <div class="relative z-10 flex justify-between items-start">
                         <span class="font-bold text-xl">${card.cardName}</span>
                         <div class="h-8 flex items-center">${getBankLogo(card.bankName)}</div>
                     </div>
-                    <div>
+                    <div class="relative z-10">
                         <div class="mb-2">
                             <p class="text-sm text-slate-300">Güncel Borç</p>
                             <p class="text-2xl font-bold tracking-wider">${currentDebt.toFixed(2)} ₺</p>
@@ -2222,12 +2221,52 @@
                             </div>
                         </div>
                     </div>
+                     <div class="absolute top-3 right-3 z-20 flex gap-2">
+                        <button data-id="${card.id}" class="edit-card-btn text-slate-300 hover:text-white text-xs"><i class="fa-solid fa-pencil"></i></button>
+                        <button data-id="${card.id}" class="delete-card-btn text-slate-300 hover:text-white text-xs"><i class="fa-solid fa-trash-can"></i></button>
+                    </div>
                 `;
-                cardEl.addEventListener('click', () => openCardDetailsModal(card.id));
+                cardEl.addEventListener('click', (e) => {
+                    if (e.target.closest('.delete-card-btn') || e.target.closest('.edit-card-btn')) {
+                        return;
+                    }
+                    openCardDetailsModal(card.id)
+                });
                 creditCardList.appendChild(cardEl);
             }
             totalCardDebtEl.textContent = `${totalDebt.toFixed(2)} ₺`;
             totalMinimumPaymentEl.textContent = `${totalMinimum.toFixed(2)} ₺`;
+
+            creditCardList.querySelectorAll('.delete-card-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    openDeleteModal(e.currentTarget.dataset.id, 'creditCard');
+                });
+            });
+            creditCardList.querySelectorAll('.edit-card-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const card = allCreditCards.find(c => c.id === e.currentTarget.dataset.id);
+                    if (card) openEditCardModal(card);
+                });
+            });
+        }
+
+        function openEditCardModal(card) {
+            creditCardForm.reset();
+            document.getElementById('credit-card-modal-title').textContent = 'Kredi Kartını Düzenle';
+            creditCardForm.cardId.value = card.id;
+            creditCardForm.cardName.value = card.cardName;
+            creditCardForm.bankName.value = card.bankName;
+            creditCardForm.limit.value = card.limit;
+            creditCardForm.statementDay.value = card.statementDay;
+            creditCardForm.paymentDueDay.value = card.paymentDueDay;
+            
+            const themeRadio = creditCardForm.querySelector(`input[name="cardTheme"][value="${card.cardTheme}"]`);
+            if(themeRadio) themeRadio.checked = true;
+            
+            cardThemeSelector.dispatchEvent(new Event('change', {bubbles:true}));
+            creditCardModal.classList.remove('hidden');
         }
 
         addCreditCardBtn.addEventListener('click', () => {
@@ -2663,4 +2702,3 @@
     </script>
 </body>
 </html>
-
