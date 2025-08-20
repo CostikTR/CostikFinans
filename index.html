@@ -431,6 +431,8 @@
                         <option>Halkbank</option>
                         <option>Vakıfbank</option>
                         <option>Ziraat Bankası</option>
+                        <option>Denizbank</option>
+                        <option>ING</option>
                     </select>
                 </div>
                 <div>
@@ -2593,12 +2595,19 @@
         function getBankLogo(bankName) {
             const name = bankName.toLowerCase();
             const logoClass = "h-8 opacity-90";
-            if (name.includes('garanti')) return `<img src="/images/garanti.svg" class="${logoClass}" alt="Garanti Logo">`;
-            // Diğer logolar SVG olarak eklenebilir
-            if (name.includes('akbank')) return `<svg class="${logoClass}" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z" /></svg>`;
-            if (name.includes('iş bankası')) return `<svg class="${logoClass}" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z" /></svg>`;
-            if (name.includes('yapı kredi')) return `<svg class="${logoClass}" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z" /></svg>`;
-            return '<i class="fa-solid fa-credit-card text-3xl opacity-50"></i>';
+            switch(name) {
+                case 'garanti': return `<img src="/images/garanti.svg" class="${logoClass}" alt="Garanti Logo">`;
+                case 'akbank': return `<img src="/image/akbank.svg" class="${logoClass}" alt="Akbank Logo">`;
+                case 'iş bankası': return `<img src="/image/isbank.svg" class="${logoClass}" alt="İş Bankası Logo">`;
+                case 'yapı kredi': return `<img src="/image/yapikredi.svg" class="${logoClass}" alt="Yapı Kredi Logo">`;
+                case 'qnb finansbank': return `<img src="/image/qnb.svg" class="${logoClass}" alt="QNB Finansbank Logo">`;
+                case 'halkbank': return `<img src="/image/halkbank.svg" class="${logoClass}" alt="Halkbank Logo">`;
+                case 'vakıfbank': return `<img src="/image/vakif.svg" class="${logoClass}" alt="Vakıfbank Logo">`;
+                case 'ziraat bankası': return `<img src="/image/ziraat.svg" class="${logoClass}" alt="Ziraat Bankası Logo">`;
+                case 'denizbank': return `<img src="/image/denizbank.svg" class="${logoClass}" alt="Denizbank Logo">`;
+                case 'ing': return `<img src="/image/ing.svg" class="${logoClass}" alt="ING Logo">`;
+                default: return '<i class="fa-solid fa-credit-card text-3xl opacity-50"></i>';
+            }
         }
 
         // YENİ: Kart Harcama Grafiği
