@@ -144,6 +144,16 @@
         .sidebar-link.active i {
             color: white;
         }
+        /* Kart Tema Seçimi Stili */
+        input[name="cardTheme"]:checked + span {
+            ring: 2px;
+            ring-offset: 2px;
+            --tw-ring-offset-color: #fff;
+            --tw-ring-color: #6366f1;
+        }
+        .dark input[name="cardTheme"]:checked + span {
+             --tw-ring-offset-color: #1e293b;
+        }
     </style>
 </head>
 <body class="bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200 transition-colors duration-300">
@@ -265,9 +275,6 @@
                     <!-- FİNANS PANELİ SAYFASI -->
                     <div id="finans-paneli-page" class="page fade-in">
                         <div class="flex justify-end items-center mb-6 gap-2">
-                             <button id="close-period-btn" class="bg-teal-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-teal-700 transition-transform transform hover:scale-105 text-sm">
-                                 <i class="fa-solid fa-calendar-check mr-2"></i>Dönemi Kapat ve Aktar
-                             </button>
                              <button id="history-btn" class="bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700 transition-transform transform hover:scale-105 text-sm">
                                  <i class="fa-solid fa-history mr-2"></i>İşlem Geçmişi
                              </button>
@@ -294,7 +301,7 @@
                                 <div class="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div class="relative overflow-hidden bg-gradient-to-br from-green-400 to-green-600 p-6 rounded-2xl shadow-xl text-white transition-transform transform hover:-translate-y-1"><div class="absolute -right-4 -bottom-4 opacity-20"><i class="fa-solid fa-wallet text-8xl"></i></div><h2 class="text-lg font-semibold text-green-100 mb-2">Bu Dönemki Gelir</h2><p id="total-income" class="text-3xl font-bold">0.00 ₺</p></div>
                                     <div class="relative overflow-hidden bg-gradient-to-br from-red-400 to-red-600 p-6 rounded-2xl shadow-xl text-white transition-transform transform hover:-translate-y-1"><div class="absolute -right-4 -bottom-4 opacity-20"><i class="fa-solid fa-receipt text-8xl"></i></div><h2 class="text-lg font-semibold text-red-100 mb-2">Bu Dönemki Gider</h2><p id="total-expense" class="text-3xl font-bold">0.00 ₺</p></div>
-                                    <div class="md:col-span-2 relative overflow-hidden bg-gradient-to-br from-indigo-500 to-indigo-700 p-6 rounded-2xl shadow-xl text-white transition-transform transform hover:-translate-y-1"><div class="absolute -right-4 -bottom-4 opacity-20"><i class="fa-solid fa-scale-balanced text-8xl"></i></div><h2 class="text-lg font-semibold text-indigo-100 mb-2">Net Değer (Tüm Zamanlar)</h2><p id="balance" class="text-4xl font-bold">0.00 ₺</p></div>
+                                    <div class="md:col-span-2 relative overflow-hidden bg-gradient-to-br from-indigo-500 to-indigo-700 p-6 rounded-2xl shadow-xl text-white transition-transform transform hover:-translate-y-1"><div class="absolute -right-4 -bottom-4 opacity-20"><i class="fa-solid fa-scale-balanced text-8xl"></i></div><h2 class="text-lg font-semibold text-indigo-100 mb-2">Genel Bakiye</h2><p id="balance" class="text-4xl font-bold">0.00 ₺</p></div>
                                 </div>
                                 <div id="chart-card" class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-xl"><div class="flex justify-between items-center mb-4"><h2 class="text-xl font-bold text-slate-700 dark:text-slate-300">Dönemlik Gider Dağılımı</h2><button id="toggle-chart-btn" class="text-slate-400 hover:text-indigo-500" title="Grafiği Gizle/Göster"><i class="fa-solid fa-eye"></i></button></div><div id="chart-container" class="relative h-64"><canvas id="expenseChart"></canvas></div></div>
                             </div>
@@ -302,10 +309,12 @@
                                 <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg flex flex-col lg:col-span-1"><h2 class="flex items-center gap-3 text-2xl font-bold mb-4 text-slate-700 dark:text-slate-300"><i class="fa-solid fa-tags"></i>Kategorileri Yönet</h2><form id="category-form" class="flex items-center gap-2 mb-4"><input type="text" name="categoryName" placeholder="Yeni Gider Kategorisi" required class="block w-full px-3 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm text-sm"><button type="submit" class="bg-indigo-500 text-white font-bold p-2 rounded-md hover:bg-indigo-600 text-sm flex-shrink-0"><i class="fa-solid fa-plus"></i></button></form><div id="custom-category-list" class="space-y-2 flex-grow overflow-y-auto custom-scrollbar pr-2"></div></div>
                                 <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg flex flex-col lg:col-span-2"><div class="flex justify-between items-center mb-4"><h2 class="flex items-center gap-3 text-2xl font-bold text-slate-700 dark:text-slate-300"><i class="fa-solid fa-bullseye"></i>Bütçe Yönetimi</h2><div class="flex items-center gap-3"><button id="ai-budget-suggestion-btn" class="text-sm bg-violet-500 text-white font-semibold py-1 px-3 rounded-md hover:bg-violet-600">✨ Akıllı Bütçe Önerileri</button><button id="add-budget-btn" class="text-sm bg-indigo-500 text-white font-semibold py-1 px-3 rounded-md hover:bg-indigo-600">+ Ekle</button><button id="toggle-budget-list-btn" class="text-slate-400 hover:text-indigo-500" title="Bütçeleri Gizle/Göster"><i class="fa-solid fa-chevron-up"></i></button></div></div><div id="budget-list" class="space-y-4 overflow-y-auto custom-scrollbar pr-2 flex-grow"></div></div>
                             </div>
-                            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                            <!-- GÜNCELLENDİ: Gider Listeleri -->
+                            <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
                                 <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg flex flex-col"><h2 class="flex items-center gap-3 text-3xl font-bold mb-4 text-green-500"><i class="fa-solid fa-circle-plus"></i>Gelirler</h2><div id="income-list" class="space-y-3 flex-grow mb-4 pr-2 overflow-y-auto max-h-[450px] custom-scrollbar"></div></div>
                                 <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg flex flex-col"><h2 class="flex items-center gap-3 text-3xl font-bold mb-4 text-red-500"><i class="fa-solid fa-building-columns"></i>Sabit Giderler</h2><div id="fixed-expense-list" class="space-y-3 flex-grow mb-4 pr-2 overflow-y-auto max-h-[450px] custom-scrollbar"></div></div>
                                 <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg flex flex-col"><h2 class="flex items-center gap-3 text-3xl font-bold mb-4 text-orange-500"><i class="fa-solid fa-cart-shopping"></i>Düzensiz Giderler</h2><div id="irregular-expense-list" class="space-y-3 flex-grow mb-4 pr-2 overflow-y-auto max-h-[450px] custom-scrollbar"></div></div>
+                                <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg flex flex-col"><h2 class="flex items-center gap-3 text-3xl font-bold mb-4 text-cyan-500"><i class="fa-solid fa-credit-card"></i>Kredi Ödemeleri</h2><div id="credit-payment-list" class="space-y-3 flex-grow mb-4 pr-2 overflow-y-auto max-h-[450px] custom-scrollbar"></div></div>
                             </div>
                         </div>
                         <div id="history-view" class="hidden">
@@ -318,10 +327,14 @@
 
                     <!-- GÜNCELLENDİ: ÖDEMELER SAYFASI -->
                     <div id="odemeler-page" class="page hidden fade-in">
-                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                             <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg">
                                 <h3 class="text-lg font-semibold text-slate-500 dark:text-slate-400 mb-2">Toplam Kredi Kartı Borcu</h3>
                                 <p id="total-card-debt" class="text-3xl font-bold text-red-500">0.00 ₺</p>
+                            </div>
+                             <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg">
+                                <h3 class="text-lg font-semibold text-slate-500 dark:text-slate-400 mb-2">Toplam Asgari Ödeme</h3>
+                                <p id="total-minimum-payment" class="text-3xl font-bold text-yellow-500">0.00 ₺</p>
                             </div>
                             <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg">
                                 <h3 class="text-lg font-semibold text-slate-500 dark:text-slate-400 mb-2">Toplam Diğer Borçlar</h3>
@@ -431,12 +444,14 @@
                         <option>Halkbank</option>
                         <option>Vakıfbank</option>
                         <option>Ziraat Bankası</option>
+                        <option>Denizbank</option>
+                        <option>ING</option>
                     </select>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Kart Teması</label>
-                    <div class="mt-2 grid grid-cols-4 gap-2">
-                        <label class="cursor-pointer"><input type="radio" name="cardTheme" value="slate" class="sr-only" checked><span class="block h-10 w-full rounded-lg bg-gradient-to-br from-slate-700 to-slate-900 border-2 border-transparent ring-2 ring-offset-2 ring-offset-white dark:ring-offset-slate-800 ring-indigo-500"></span></label>
+                    <div id="card-theme-selector" class="mt-2 grid grid-cols-4 gap-2">
+                        <label class="cursor-pointer"><input type="radio" name="cardTheme" value="slate" class="sr-only" checked><span class="block h-10 w-full rounded-lg bg-gradient-to-br from-slate-700 to-slate-900 border-2 border-transparent"></span></label>
                         <label class="cursor-pointer"><input type="radio" name="cardTheme" value="blue" class="sr-only"><span class="block h-10 w-full rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 border-2 border-transparent"></span></label>
                         <label class="cursor-pointer"><input type="radio" name="cardTheme" value="green" class="sr-only"><span class="block h-10 w-full rounded-lg bg-gradient-to-br from-green-500 to-green-700 border-2 border-transparent"></span></label>
                         <label class="cursor-pointer"><input type="radio" name="cardTheme" value="purple" class="sr-only"><span class="block h-10 w-full rounded-lg bg-gradient-to-br from-purple-500 to-purple-700 border-2 border-transparent"></span></label>
@@ -598,6 +613,7 @@
         const incomeList = document.getElementById('income-list');
         const fixedExpenseList = document.getElementById('fixed-expense-list');
         const irregularExpenseList = document.getElementById('irregular-expense-list');
+        const creditPaymentList = document.getElementById('credit-payment-list');
         const historyStartDate = document.getElementById('history-start-date');
         const historyEndDate = document.getElementById('history-end-date');
         const historyCategoryFilter = document.getElementById('history-category-filter');
@@ -621,7 +637,6 @@
         const addBalanceForm = document.getElementById('add-balance-form');
         const cancelAddBalanceBtn = document.getElementById('cancel-add-balance-btn');
         const accountBalanceCard = document.getElementById('account-balance-card');
-        const closePeriodBtn = document.getElementById('close-period-btn');
         const addCreditCardBtn = document.getElementById('add-credit-card-btn');
         const creditCardModal = document.getElementById('credit-card-modal');
         const creditCardForm = document.getElementById('credit-card-form');
@@ -637,8 +652,10 @@
         const payMinimumDebtBtn = document.getElementById('pay-minimum-debt-btn');
         const totalCardDebtEl = document.getElementById('total-card-debt');
         const totalManualDebtEl = document.getElementById('total-manual-debt');
+        const totalMinimumPaymentEl = document.getElementById('total-minimum-payment');
         const cardPaymentHistoryList = document.getElementById('card-payment-history-list');
         const cardDebtChartContainer = document.getElementById('card-debt-chart-container');
+        const cardThemeSelector = document.getElementById('card-theme-selector');
 
 
         // --- UYGULAMA DURUMU (STATE) ---
@@ -660,7 +677,7 @@
         let currentCardDebts = [];
         let expenseChart = null;
         let historyChart = null; 
-        let cardDebtChart = null; // Yeni
+        let cardDebtChart = null; 
         let parsedCsvData = [];
         let userSettings = { paymentDay: 1, accountBalance: 0 };
         let noteSaveTimeout;
@@ -852,7 +869,7 @@
                     await setDoc(docRef, settingsToSave);
                     settingsModal.classList.add('hidden');
                     displayTransactions();
-                    updateSummary(allTransactions);
+                    updateSummary();
                     updateExpenseChart(allTransactions);
                     displayBudgets();
                     showNotification('Ayarlar kaydedildi.', 'success');
@@ -871,6 +888,7 @@
             if (balanceElement) {
                  balanceElement.textContent = `${userSettings.accountBalance.toFixed(2)} ₺`;
             }
+            updateSummary();
         }
 
         async function updateBalanceInFirestore(newBalance) {
@@ -907,38 +925,6 @@
             addBalanceModal.classList.add('hidden');
             showNotification(`${amountToAdd.toFixed(2)} ₺ bakiye eklendi.`, 'success');
         });
-
-        closePeriodBtn.addEventListener('click', async () => {
-            const { startDate, endDate } = getPreviousFinancialCycle(userSettings.paymentDay);
-            
-            const previousCycleTransactions = allTransactions.filter(tx => {
-                const txDate = tx.createdAt?.toDate();
-                return txDate && txDate >= startDate && txDate <= endDate;
-            });
-
-            if (previousCycleTransactions.length === 0) {
-                showNotification('Önceki döneme ait işlem bulunamadı.');
-                return;
-            }
-
-            const cycleIncome = previousCycleTransactions
-                .filter(tx => tx.type === 'income')
-                .reduce((sum, tx) => sum + tx.amount, 0);
-
-            const cycleExpense = previousCycleTransactions
-                .filter(tx => tx.type === 'expense' && tx.isPaid)
-                .reduce((sum, tx) => sum + tx.amount, 0);
-
-            const netChange = cycleIncome - cycleExpense;
-            const newBalance = userSettings.accountBalance + netChange;
-
-            await updateBalanceInFirestore(newBalance);
-            updateBalanceDisplay();
-
-            const message = `Önceki dönemden kalan ${netChange.toFixed(2)} ₺ bakiyenize aktarıldı.`;
-            showNotification(message, 'success');
-        });
-
 
         // --- KATEGORİ YÖNETİMİ ---
         function loadCategories() {
@@ -1159,7 +1145,11 @@
                     const activeExpenseTypeBtn = transactionForm.querySelector('.expense-type-btn.active');
                     const expenseSubtype = activeExpenseTypeBtn ? activeExpenseTypeBtn.dataset.type : null;
 
-                    if (type === 'expense' && expenseSubtype === 'irregular') {
+                    if (type === 'income') {
+                        const newBalance = userSettings.accountBalance + amount;
+                        await updateBalanceInFirestore(newBalance);
+                        updateBalanceDisplay();
+                    } else if (type === 'expense' && expenseSubtype === 'irregular') {
                         data.isPaid = true;
                         const newBalance = userSettings.accountBalance - amount;
                         await updateBalanceInFirestore(newBalance);
@@ -1191,7 +1181,7 @@
                     allTransactions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                     checkAndCreateRecurringTransactions(allTransactions);
                     displayTransactions();
-                    updateSummary(allTransactions);
+                    updateSummary();
                     updateExpenseChart(allTransactions);
                     checkReminders();
                     displayPaymentHistory();
@@ -1214,10 +1204,13 @@
             );
             fixedExpenses.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
 
-            const irregularExpenses = filtered.filter(tx => { const txDate = tx.createdAt?.toDate(); return tx.type === 'expense' && !tx.isInstallment && !defaultFixedExpenseCategories.includes(tx.category) && txDate >= startDate && txDate <= endDate; });
+            const irregularExpenses = filtered.filter(tx => { const txDate = tx.createdAt?.toDate(); return tx.type === 'expense' && tx.isPaid && !tx.isInstallment && !defaultFixedExpenseCategories.includes(tx.category) && txDate >= startDate && txDate <= endDate; });
+            const creditPayments = filtered.filter(tx => { const txDate = tx.createdAt?.toDate(); return tx.category === 'Kredi' && tx.isPaid && txDate && txDate >= startDate && txDate <= endDate; });
+
             renderList(incomeList, incomes, 'Bu dönemde gelir yok.');
             renderList(fixedExpenseList, fixedExpenses, 'Ödenecek sabit gider/taksit yok.');
             renderList(irregularExpenseList, irregularExpenses, 'Bu dönemde düzensiz gider yok.');
+            renderList(creditPaymentList, creditPayments, 'Bu dönemde kredi ödemesi yok.');
         }
         function renderList(container, transactions, emptyMessage) {
             if (!container) return;
@@ -1230,7 +1223,7 @@
                 const dueDateHTML = tx.dueDate ? `<p class="text-xs text-slate-500">Tarih: ${new Date(tx.dueDate + 'T00:00:00Z').toLocaleDateString('tr-TR')}</p>` : '';
                 const paidCheckboxHTML = container.id === 'fixed-expense-list' ? `<input type="checkbox" data-id="${tx.id}" class="paid-checkbox h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 mr-3" ${tx.isPaid ? 'checked' : ''}>` : '';
                 const editButtonHTML = !tx.isInstallment ? `<button data-id="${tx.id}" data-type="transaction" class="edit-btn text-slate-400 hover:text-indigo-500 text-xs"><i class="fa-solid fa-pencil"></i></button>` : '';
-                return `<div class="transaction-item flex justify-between items-center text-sm p-2 rounded-md transition-colors hover:bg-slate-100 dark:hover:bg-slate-700/50" data-id="${tx.id}"><div class="flex items-center flex-grow truncate">${paidCheckboxHTML}<div class="truncate ${tx.isPaid ? 'paid-transaction' : ''}"><p class="font-semibold truncate">${tx.description}</p><div class="flex items-center space-x-2"><p class="text-xs text-slate-500">${tx.category}</p>${dueDateHTML}</div></div></div><div class="text-right ml-2 flex-shrink-0"><p class="font-bold ${isIncome ? 'text-green-500' : 'text-red-500'} ${tx.isPaid ? 'paid-transaction' : ''}">${isIncome ? '+' : '-'} ${tx.amount.toFixed(2)}₺</p><div class="actions flex items-center justify-end space-x-2 mt-1">${editButtonHTML}<button data-id="${tx.id}" data-type="transaction" class="delete-btn text-slate-400 hover:text-red-500 text-xs"><i class="fa-solid fa-trash-can"></i></button></div></div></div>`;
+                return `<div class="transaction-item flex justify-between items-center text-sm p-2 rounded-md transition-colors hover:bg-slate-100 dark:hover:bg-slate-700/50" data-id="${tx.id}"><div class="flex items-center flex-grow truncate">${paidCheckboxHTML}<div class="truncate ${tx.isPaid && container.id !== 'credit-payment-list' ? 'paid-transaction' : ''}"><p class="font-semibold truncate">${tx.description}</p><div class="flex items-center space-x-2"><p class="text-xs text-slate-500">${tx.category}</p>${dueDateHTML}</div></div></div><div class="text-right ml-2 flex-shrink-0"><p class="font-bold ${isIncome ? 'text-green-500' : 'text-red-500'} ${tx.isPaid && container.id !== 'credit-payment-list' ? 'paid-transaction' : ''}">${isIncome ? '+' : '-'} ${tx.amount.toFixed(2)}₺</p><div class="actions flex items-center justify-end space-x-2 mt-1">${editButtonHTML}<button data-id="${tx.id}" data-type="transaction" class="delete-btn text-slate-400 hover:text-red-500 text-xs"><i class="fa-solid fa-trash-can"></i></button></div></div></div>`;
             }).join('');
             container.querySelectorAll('.paid-checkbox').forEach(checkbox => {
                 checkbox.addEventListener('change', (e) => {
@@ -1444,19 +1437,19 @@
 
             return { startDate, endDate };
         }
-        function updateSummary(transactions) {
+        function updateSummary() {
             const { startDate, endDate } = getCurrentFinancialCycle(userSettings.paymentDay);
-            const cycleTransactions = transactions.filter(tx => { const txDate = tx.createdAt?.toDate(); return txDate && txDate >= startDate && txDate <= endDate; });
+            const cycleTransactions = allTransactions.filter(tx => { const txDate = tx.createdAt?.toDate(); return txDate && txDate >= startDate && txDate <= endDate; });
             const totalIncome = cycleTransactions.filter(tx => tx.type === 'income').reduce((sum, tx) => sum + tx.amount, 0);
             const totalExpense = cycleTransactions.filter(tx => tx.type === 'expense').reduce((sum, tx) => sum + tx.amount, 0);
-            const overallBalance = transactions.reduce((bal, tx) => { if (tx.type === 'income') return bal + tx.amount; if (tx.type === 'expense' && tx.isPaid) return bal - tx.amount; return bal; }, 0);
+            
             document.getElementById('total-income').textContent = `${totalIncome.toFixed(2)} ₺`;
             document.getElementById('total-expense').textContent = `${totalExpense.toFixed(2)} ₺`;
-            document.getElementById('balance').textContent = `${overallBalance.toFixed(2)} ₺`;
+            document.getElementById('balance').textContent = `${userSettings.accountBalance.toFixed(2)} ₺`;
         }
         function clearUI() {
-            [customCategoryList, incomeList, fixedExpenseList, irregularExpenseList, budgetList, creditCardList, manualDebtList].forEach(list => { if (list) list.innerHTML = ''; });
-            updateSummary([]);
+            [customCategoryList, incomeList, fixedExpenseList, irregularExpenseList, creditPaymentList, budgetList, creditCardList, manualDebtList].forEach(list => { if (list) list.innerHTML = ''; });
+            updateSummary();
             if (expenseChart) {
                 expenseChart.destroy();
                 chartContainer.innerHTML = '<canvas id="expenseChart"></canvas>';
@@ -2188,16 +2181,19 @@
             if (allCreditCards.length === 0) {
                 creditCardList.innerHTML = '<p class="text-slate-500 text-sm text-center p-4">Henüz kredi kartı eklenmedi.</p>';
                 totalCardDebtEl.textContent = `0.00 ₺`;
+                totalMinimumPaymentEl.textContent = `0.00 ₺`;
                 return;
             }
 
             let totalDebt = 0;
+            let totalMinimum = 0;
 
             for (const card of allCreditCards) {
                 const debtsQuery = query(collection(db, `artifacts/${appId}/users/${currentUserId}/creditCards/${card.id}/debts`));
                 const debtSnapshot = await getDocs(debtsQuery);
                 const currentDebt = debtSnapshot.docs.reduce((sum, doc) => sum + doc.data().amount, 0);
                 totalDebt += currentDebt;
+                totalMinimum += currentDebt * 0.20;
                 
                 const availableLimit = card.limit - currentDebt;
                 const cardThemeClasses = getCardThemeClasses(card.cardTheme);
@@ -2222,8 +2218,7 @@
                                 <p class="font-semibold">${availableLimit.toFixed(2)} ₺</p>
                             </div>
                             <div class="text-right">
-                                <p class="text-slate-400">Son Ödeme</p>
-                                <p class="font-semibold">Her Ayın ${card.paymentDueDay}'i</p>
+                                <p class="text-slate-400">Ekstre: ${card.statementDay}'i | Son Ödeme: ${card.paymentDueDay}'i</p>
                             </div>
                         </div>
                     </div>
@@ -2232,6 +2227,7 @@
                 creditCardList.appendChild(cardEl);
             }
             totalCardDebtEl.textContent = `${totalDebt.toFixed(2)} ₺`;
+            totalMinimumPaymentEl.textContent = `${totalMinimum.toFixed(2)} ₺`;
         }
 
         addCreditCardBtn.addEventListener('click', () => {
@@ -2243,6 +2239,15 @@
 
         cancelCreditCardBtn.addEventListener('click', () => {
             creditCardModal.classList.add('hidden');
+        });
+        
+        cardThemeSelector.addEventListener('change', (e) => {
+            if (e.target.name === 'cardTheme') {
+                cardThemeSelector.querySelectorAll('span').forEach(span => {
+                    span.classList.remove('ring-2', 'ring-offset-2', 'ring-indigo-500', 'dark:ring-offset-slate-800');
+                });
+                e.target.nextElementSibling.classList.add('ring-2', 'ring-offset-2', 'ring-indigo-500', 'dark:ring-offset-slate-800');
+            }
         });
 
         creditCardForm.addEventListener('submit', async (e) => {
@@ -2593,12 +2598,19 @@
         function getBankLogo(bankName) {
             const name = bankName.toLowerCase();
             const logoClass = "h-8 opacity-90";
-            if (name.includes('garanti')) return `<img src="/images/garanti.svg" class="${logoClass}" alt="Garanti Logo">`;
-            // Diğer logolar SVG olarak eklenebilir
-            if (name.includes('akbank')) return `<svg class="${logoClass}" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z" /></svg>`;
-            if (name.includes('iş bankası')) return `<svg class="${logoClass}" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z" /></svg>`;
-            if (name.includes('yapı kredi')) return `<svg class="${logoClass}" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z" /></svg>`;
-            return '<i class="fa-solid fa-credit-card text-3xl opacity-50"></i>';
+            switch(name) {
+                case 'garanti': return `<img src="/images/garanti.svg" class="${logoClass}" alt="Garanti Logo">`;
+                case 'akbank': return `<img src="/images/akbank.svg" class="${logoClass}" alt="Akbank Logo">`;
+                case 'iş bankası': return `<img src="/images/isbank.svg" class="${logoClass}" alt="İş Bankası Logo">`;
+                case 'yapı kredi': return `<img src="/images/yapikredi.svg" class="${logoClass}" alt="Yapı Kredi Logo">`;
+                case 'qnb finansbank': return `<img src="/images/qnb.svg" class="${logoClass}" alt="QNB Finansbank Logo">`;
+                case 'halkbank': return `<img src="/images/halkbank.svg" class="${logoClass}" alt="Halkbank Logo">`;
+                case 'vakıfbank': return `<img src="/images/vakif.svg" class="${logoClass}" alt="Vakıfbank Logo">`;
+                case 'ziraat bankası': return `<img src="/images/ziraat.svg" class="${logoClass}" alt="Ziraat Bankası Logo">`;
+                case 'denizbank': return `<img src="/images/denizbank.svg" class="${logoClass}" alt="Denizbank Logo">`;
+                case 'ing': return `<img src="/images/ing.svg" class="${logoClass}" alt="ING Logo">`;
+                default: return '<i class="fa-solid fa-credit-card text-3xl opacity-50"></i>';
+            }
         }
 
         // YENİ: Kart Harcama Grafiği
