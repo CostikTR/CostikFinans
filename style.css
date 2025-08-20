@@ -59,6 +59,32 @@ body {
     opacity: 1;
 }
 
+/* Sidebar & Mobile Navigation */
+.sidebar-link, .bottom-nav-link {
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.sidebar-link.active {
+    background-color: #4f46e5; /* indigo-600 */
+    color: white;
+    font-weight: 600;
+}
+
+.sidebar-link.active i {
+    color: white;
+}
+
+.bottom-nav-link.active {
+    color: #4f46e5; /* indigo-600 */
+}
+.dark .bottom-nav-link.active {
+    color: #818cf8; /* dark:indigo-400 */
+}
+
+#sidebar.open {
+    transform: translateX(0);
+}
+
 /* Notes List Active Item */
 .note-list-item.active {
     background-color: #eef2ff; /* indigo-50 */
@@ -140,21 +166,6 @@ body {
 
 #quick-action-menu {
     transition: transform 0.2s ease-out, opacity 0.2s ease-out;
-}
-
-/* Sidebar Navigation */
-.sidebar-link {
-    transition: background-color 0.2s, color 0.2s;
-}
-
-.sidebar-link.active {
-    background-color: #4f46e5; /* indigo-600 */
-    color: white;
-    font-weight: 600;
-}
-
-.sidebar-link.active i {
-    color: white;
 }
 
 /* Credit Card Theme Selection */
