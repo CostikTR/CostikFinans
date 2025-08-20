@@ -38,7 +38,37 @@
     <div id="app">
         <!-- Giriş ve Kayıt Ekranı -->
         <div id="auth-screen" class="fade-in min-h-screen flex items-center justify-center p-4">
-            <!-- Auth Formları Burada -->
+             <div class="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-xl w-full max-w-md mx-auto">
+                <h1 class="text-3xl font-bold text-center mb-2 text-indigo-600 dark:text-indigo-400">FinansPro</h1>
+                <p class="text-center text-slate-500 dark:text-slate-400 mb-8">Hesabınıza giriş yapın veya yeni hesap oluşturun.</p>
+                <div class="flex border-b border-slate-200 dark:border-slate-700 mb-6">
+                    <button id="login-tab-button" class="flex-1 py-2 font-semibold text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400">Giriş Yap</button>
+                    <button id="register-tab-button" class="flex-1 py-2 font-semibold text-slate-500">Kayıt Ol</button>
+                </div>
+                <div id="auth-error" class="text-red-500 text-sm text-center mb-4 h-5"></div>
+                <form id="login-form" class="space-y-6">
+                    <div>
+                        <label for="login-email" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Email</label>
+                        <input type="email" id="login-email" required class="mt-1 block w-full px-4 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <label for="login-password" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Şifre</label>
+                        <input type="password" id="login-password" required class="mt-1 block w-full px-4 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <button type="submit" class="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-transform transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed">Giriş Yap</button>
+                </form>
+                <form id="register-form" class="hidden space-y-6">
+                    <div>
+                        <label for="register-email" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Email</label>
+                        <input type="email" id="register-email" required class="mt-1 block w-full px-4 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <label for="register-password" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Şifre</label>
+                        <input type="password" id="register-password" required class="mt-1 block w-full px-4 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <button type="submit" class="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-transform transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed">Hesap Oluştur</button>
+                </form>
+            </div>
         </div>
 
         <!-- Ana Uygulama Ekranı -->
@@ -54,7 +84,32 @@
             <!-- Yan Menü (Sidebar) -->
             <div id="sidebar-overlay" class="md:hidden fixed inset-0 bg-black/50 z-40 hidden"></div>
             <aside id="sidebar" class="w-64 bg-white dark:bg-slate-800 p-4 flex flex-col h-screen fixed shadow-lg z-50 transform -translate-x-full md:translate-x-0 transition-transform duration-300">
-                <!-- Sidebar içeriği burada -->
+                <div class="text-2xl font-bold text-indigo-600 dark:text-indigo-400 mb-8 text-center">
+                    <i class="fa-solid fa-chart-pie mr-2"></i>FinansPro
+                </div>
+                <nav class="flex-grow flex flex-col space-y-2">
+                    <a href="#" class="sidebar-link active flex items-center p-3 rounded-lg" data-page="finans-paneli-page">
+                        <i class="fa-solid fa-house w-6 text-center text-slate-500"></i>
+                        <span class="ml-3">Finans Panelim</span>
+                    </a>
+                    <a href="#" class="sidebar-link flex items-center p-3 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700" data-page="odemeler-page">
+                        <i class="fa-solid fa-credit-card w-6 text-center text-slate-500"></i>
+                        <span class="ml-3">Ödemeler</span>
+                    </a>
+                    <a href="#" class="sidebar-link flex items-center p-3 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700" data-page="raporlar-page">
+                        <i class="fa-solid fa-chart-simple w-6 text-center text-slate-500"></i>
+                        <span class="ml-3">Raporlar</span>
+                    </a>
+                    <a href="#" class="sidebar-link flex items-center p-3 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700" data-page="hedefler-page">
+                        <i class="fa-solid fa-bullseye w-6 text-center text-slate-500"></i>
+                        <span class="ml-3">Hedefler</span>
+                    </a>
+                </nav>
+
+                <div class="mt-auto p-2 text-center text-sm text-slate-500">
+                    <p id="user-email-display" class="font-semibold truncate"></p>
+                    <p class="text-xs">© 2024 FinansPro</p>
+                </div>
             </aside>
 
             <!-- Ana İçerik Alanı -->
@@ -62,30 +117,140 @@
                 <!-- Masaüstü Header -->
                 <header class="hidden md:flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
                     <h1 id="page-title" class="text-4xl font-bold text-indigo-600 dark:text-indigo-400">Finans Panelim</h1>
-                    <!-- Masaüstü Header butonları burada -->
+                    <div class="flex items-center gap-2 flex-wrap justify-center">
+                        <div class="relative">
+                            <input type="text" id="search-input" placeholder="İşlemlerde Ara..." class="pl-10 pr-4 py-2 w-40 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                        </div>
+                        
+                        <div class="flex items-center gap-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 shadow-sm">
+                            <i class="fa-solid fa-wallet text-sky-500 dark:text-sky-400"></i>
+                            <span id="account-balance-card" class="text-sm font-semibold text-slate-700 dark:text-slate-200">0.00 ₺</span>
+                            <button id="add-balance-btn" class="text-sky-500 hover:text-sky-600 dark:text-sky-400 dark:hover:text-sky-300" title="Bakiye Yükle">
+                                <i class="fa-solid fa-plus-circle"></i>
+                            </button>
+                        </div>
+
+                        <button id="theme-toggle-btn" class="bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold py-2 px-3 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-600 transition-transform transform hover:scale-105 text-sm shadow-sm border dark:border-slate-600">
+                            <i class="fa-solid fa-moon"></i>
+                        </button>
+                        <button id="notepad-btn" class="bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold py-2 px-3 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-600 transition-transform transform hover:scale-105 text-sm shadow-sm border dark:border-slate-600">
+                            <i class="fa-solid fa-note-sticky"></i>
+                        </button>
+                        <button id="settings-btn" class="bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold py-2 px-3 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-600 transition-transform transform hover:scale-105 text-sm shadow-sm border dark:border-slate-600">
+                            <i class="fa-solid fa-cog"></i>
+                        </button>
+                        <button id="logout-button" class="bg-red-500 text-white font-bold py-2 px-3 rounded-lg hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-transform transform hover:scale-105">
+                            <i class="fa-solid fa-right-from-bracket"></i>
+                        </button>
+                    </div>
                 </header>
                 
                 <div id="page-content">
                     <!-- FİNANS PANELİ SAYFASI -->
                     <div id="finans-paneli-page" class="page fade-in">
-                        <!-- Panel içeriği burada -->
+                        <div class="flex justify-end items-center mb-6 gap-2">
+                             <button id="history-btn" class="bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700 transition-transform transform hover:scale-105 text-sm">
+                                 <i class="fa-solid fa-history mr-2"></i>İşlem Geçmişi
+                             </button>
+                            <button id="import-csv-btn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition-transform transform hover:scale-105 text-sm">
+                                <i class="fa-solid fa-file-import mr-2"></i>İçe Aktar
+                            </button>
+                            <button id="export-csv-btn" class="bg-slate-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-slate-700 transition-transform transform hover:scale-105 text-sm">
+                                <i class="fa-solid fa-file-csv mr-2"></i>Dışa Aktar
+                            </button>
+                            <input type="file" id="csv-file-input" class="hidden" accept=".csv">
+                        </div>
+                        
+                        <div id="dashboard-view">
+                            <div id="reminder-banner" class="hidden bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 p-4 rounded-lg mb-8 shadow-lg" role="alert">
+                                <div class="flex justify-between items-center">
+                                    <div>
+                                        <p class="font-bold">Yaklaşan Ödemeler ve Hatırlatmalar</p>
+                                        <div id="reminder-list" class="text-sm mt-2 space-y-1"></div>
+                                    </div>
+                                    <button id="close-reminder-btn" class="text-yellow-800 hover:text-yellow-900 text-2xl">&times;</button>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                                <div class="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div class="relative overflow-hidden bg-gradient-to-br from-green-400 to-green-600 p-6 rounded-2xl shadow-xl text-white transition-transform transform hover:-translate-y-1"><div class="absolute -right-4 -bottom-4 opacity-20"><i class="fa-solid fa-wallet text-8xl"></i></div><h2 class="text-lg font-semibold text-green-100 mb-2">Bu Dönemki Gelir</h2><p id="total-income" class="text-3xl font-bold">0.00 ₺</p></div>
+                                    <div class="relative overflow-hidden bg-gradient-to-br from-red-400 to-red-600 p-6 rounded-2xl shadow-xl text-white transition-transform transform hover:-translate-y-1"><div class="absolute -right-4 -bottom-4 opacity-20"><i class="fa-solid fa-receipt text-8xl"></i></div><h2 class="text-lg font-semibold text-red-100 mb-2">Bu Dönemki Gider</h2><p id="total-expense" class="text-3xl font-bold">0.00 ₺</p></div>
+                                    <div class="md:col-span-2 relative overflow-hidden bg-gradient-to-br from-indigo-500 to-indigo-700 p-6 rounded-2xl shadow-xl text-white transition-transform transform hover:-translate-y-1"><div class="absolute -right-4 -bottom-4 opacity-20"><i class="fa-solid fa-scale-balanced text-8xl"></i></div><h2 class="text-lg font-semibold text-indigo-100 mb-2">Genel Bakiye</h2><p id="balance" class="text-4xl font-bold">0.00 ₺</p></div>
+                                </div>
+                                <div id="chart-card" class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-xl"><div class="flex justify-between items-center mb-4"><h2 class="text-xl font-bold text-slate-700 dark:text-slate-300">Dönemlik Gider Dağılımı</h2><button id="toggle-chart-btn" class="text-slate-400 hover:text-indigo-500" title="Grafiği Gizle/Göster"><i class="fa-solid fa-eye"></i></button></div><div id="chart-container" class="relative h-64"><canvas id="expenseChart"></canvas></div></div>
+                            </div>
+                            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+                                <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg flex flex-col lg:col-span-1"><h2 class="flex items-center gap-3 text-2xl font-bold mb-4 text-slate-700 dark:text-slate-300"><i class="fa-solid fa-tags"></i>Kategorileri Yönet</h2><form id="category-form" class="flex items-center gap-2 mb-4"><input type="text" name="categoryName" placeholder="Yeni Gider Kategorisi" required class="block w-full px-3 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm text-sm"><button type="submit" class="bg-indigo-500 text-white font-bold p-2 rounded-md hover:bg-indigo-600 text-sm flex-shrink-0"><i class="fa-solid fa-plus"></i></button></form><div id="custom-category-list" class="space-y-2 flex-grow overflow-y-auto custom-scrollbar pr-2"></div></div>
+                                <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg flex flex-col lg:col-span-2"><div class="flex justify-between items-center mb-4"><h2 class="flex items-center gap-3 text-2xl font-bold text-slate-700 dark:text-slate-300"><i class="fa-solid fa-bullseye"></i>Bütçe Yönetimi</h2><div class="flex items-center gap-3"><button id="ai-budget-suggestion-btn" class="text-sm bg-violet-500 text-white font-semibold py-1 px-3 rounded-md hover:bg-violet-600">✨ Akıllı Bütçe Önerileri</button><button id="add-budget-btn" class="text-sm bg-indigo-500 text-white font-semibold py-1 px-3 rounded-md hover:bg-indigo-600">+ Ekle</button><button id="toggle-budget-list-btn" class="text-slate-400 hover:text-indigo-500" title="Bütçeleri Gizle/Göster"><i class="fa-solid fa-chevron-up"></i></button></div></div><div id="budget-list" class="space-y-4 overflow-y-auto custom-scrollbar pr-2 flex-grow"></div></div>
+                            </div>
+                            <!-- Gider Listeleri -->
+                            <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                                <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg flex flex-col"><h2 class="flex items-center gap-3 text-3xl font-bold mb-4 text-green-500"><i class="fa-solid fa-circle-plus"></i>Gelirler</h2><div id="income-list" class="space-y-3 flex-grow mb-4 pr-2 overflow-y-auto max-h-[450px] custom-scrollbar"></div></div>
+                                <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg flex flex-col"><h2 class="flex items-center gap-3 text-3xl font-bold mb-4 text-red-500"><i class="fa-solid fa-building-columns"></i>Sabit Giderler</h2><div id="fixed-expense-list" class="space-y-3 flex-grow mb-4 pr-2 overflow-y-auto max-h-[450px] custom-scrollbar"></div></div>
+                                <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg flex flex-col"><h2 class="flex items-center gap-3 text-3xl font-bold mb-4 text-orange-500"><i class="fa-solid fa-cart-shopping"></i>Düzensiz Giderler</h2><div id="irregular-expense-list" class="space-y-3 flex-grow mb-4 pr-2 overflow-y-auto max-h-[450px] custom-scrollbar"></div></div>
+                                <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg flex flex-col"><h2 class="flex items-center gap-3 text-3xl font-bold mb-4 text-cyan-500"><i class="fa-solid fa-credit-card"></i>Kredi Ödemeleri</h2><div id="credit-payment-list" class="space-y-3 flex-grow mb-4 pr-2 overflow-y-auto max-h-[450px] custom-scrollbar"></div></div>
+                            </div>
+                        </div>
+                        <div id="history-view" class="hidden">
+                            <div class="flex justify-between items-center mb-6"><h2 class="text-3xl font-bold text-slate-800 dark:text-slate-200">İşlem Geçmişi ve Analiz</h2><button id="back-to-dashboard-btn" class="bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-700 transition-transform transform hover:scale-105 text-sm"><i class="fa-solid fa-arrow-left mr-2"></i>Panele Dön</button></div>
+                            <div class="bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-lg mb-6"><div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end"><div><label for="history-start-date" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Başlangıç Tarihi</label><input type="date" id="history-start-date" class="mt-1 block w-full px-3 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm text-sm"></div><div><label for="history-end-date" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Bitiş Tarihi</label><input type="date" id="history-end-date" class="mt-1 block w-full px-3 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm text-sm"></div><div><label for="history-category-filter" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Kategori</label><select id="history-category-filter" class="mt-1 block w-full px-3 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm text-sm"></select></div></div><div class="flex flex-wrap gap-2 mt-4"><button data-period="1" class="date-filter-btn flex-1 text-sm bg-slate-200 dark:bg-slate-700 font-semibold py-2 px-3 rounded-md hover:bg-indigo-600 hover:text-white transition-colors">Son 1 Ay</button><button data-period="3" class="date-filter-btn flex-1 text-sm bg-slate-200 dark:bg-slate-700 font-semibold py-2 px-3 rounded-md hover:bg-indigo-600 hover:text-white transition-colors">Son 3 Ay</button><button data-period="6" class="date-filter-btn flex-1 text-sm bg-slate-200 dark:bg-slate-700 font-semibold py-2 px-3 rounded-md hover:bg-indigo-600 hover:text-white transition-colors">Son 6 Ay</button><button id="clear-history-filter" class="flex-1 text-sm bg-slate-500 text-white font-bold py-2 px-3 rounded-md hover:bg-slate-600">Temizle</button></div></div>
+                            <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg mb-6"><h3 class="text-xl font-bold text-slate-700 dark:text-slate-300 mb-4">Aylık Gelir & Gider Karşılaştırması</h3><div id="history-chart-container"></div></div>
+                            <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg"><h3 class="text-xl font-bold text-slate-700 dark:text-slate-300 mb-4">Filtrelenmiş İşlemler</h3><div id="payment-history-list" class="space-y-4"></div></div>
+                        </div>
                     </div>
 
                     <!-- ÖDEMELER SAYFASI -->
                     <div id="odemeler-page" class="page hidden fade-in">
-                        <!-- Ödemeler içeriği burada -->
+                         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                            <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg">
+                                <h3 class="text-lg font-semibold text-slate-500 dark:text-slate-400 mb-2">Toplam Kredi Kartı Borcu</h3>
+                                <p id="total-card-debt" class="text-3xl font-bold text-red-500">0.00 ₺</p>
+                            </div>
+                             <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg">
+                                <h3 class="text-lg font-semibold text-slate-500 dark:text-slate-400 mb-2">Toplam Asgari Ödeme</h3>
+                                <p id="total-minimum-payment" class="text-3xl font-bold text-yellow-500">0.00 ₺</p>
+                            </div>
+                            <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg">
+                                <h3 class="text-lg font-semibold text-slate-500 dark:text-slate-400 mb-2">Toplam Diğer Borçlar</h3>
+                                <p id="total-manual-debt" class="text-3xl font-bold text-orange-500">0.00 ₺</p>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg">
+                                <div class="flex justify-between items-center mb-4">
+                                    <h2 class="text-2xl font-bold text-slate-700 dark:text-slate-300">Kredi Kartlarım</h2>
+                                    <button id="add-credit-card-btn" class="bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-700 transition-transform transform hover:scale-105 text-sm">
+                                        <i class="fa-solid fa-plus mr-2"></i>Yeni Kart Ekle
+                                    </button>
+                                </div>
+                                <div id="credit-card-list" class="space-y-6">
+                                </div>
+                            </div>
+                            <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg">
+                                <h2 class="text-2xl font-bold text-slate-700 dark:text-slate-300 mb-4">Diğer Borçlarım</h2>
+                                <form id="manual-debt-form" class="flex items-center gap-2 mb-4">
+                                    <input type="text" name="debtDescription" placeholder="Borç Açıklaması (örn: Ahmet'e)" required class="block w-full px-3 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm text-sm">
+                                    <input type="number" name="debtAmount" placeholder="Tutar" required class="block w-40 px-3 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm text-sm">
+                                    <button type="submit" class="bg-green-500 text-white font-bold p-2 rounded-md hover:bg-green-600 text-sm flex-shrink-0"><i class="fa-solid fa-plus"></i></button>
+                                </form>
+                                <div id="manual-debt-list" class="space-y-3 max-h-96 overflow-y-auto custom-scrollbar pr-2">
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- RAPORLAR SAYFASI (YENİ) -->
                     <div id="raporlar-page" class="page hidden fade-in">
                         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                             <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg">
-                                <h3 class="text-xl font-bold text-slate-700 dark:text-slate-300 mb-4">Aylık Nakit Akışı</h3>
-                                <div id="cash-flow-chart-container"></div>
+                                <h3 class="text-xl font-bold text-slate-700 dark:text-slate-300 mb-4">Aylık Nakit Akışı (Son 6 Ay)</h3>
+                                <div id="cash-flow-chart-container" class="h-80"></div>
                             </div>
                             <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg">
-                                <h3 class="text-xl font-bold text-slate-700 dark:text-slate-300 mb-4">Harcama Kategorileri Dağılımı</h3>
-                                <div id="category-treemap-container"></div>
+                                <h3 class="text-xl font-bold text-slate-700 dark:text-slate-300 mb-4">Bu Dönemki Harcama Dağılımı</h3>
+                                <div id="category-treemap-container" class="h-80"></div>
                             </div>
                         </div>
                     </div>
@@ -126,19 +291,16 @@
         </div>
     </div>
 
-    <!-- Modallar (Hedef Modalı Eklendi) -->
-    <div id="goal-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden modal-overlay">
-        <!-- Hedef ekleme/düzenleme formu burada -->
-    </div>
-    <div id="add-funds-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden modal-overlay">
-        <!-- Hedefe para ekleme formu burada -->
-    </div>
-
-    <!-- Diğer tüm modallar (transaction, delete, settings vb.) burada yer alıyor -->
+    <!-- Modallar -->
+    <!-- ... (Tüm modalların HTML kodları burada yer alacak) ... -->
 
     <!-- Sabit Ekle Butonu -->
     <div class="fixed bottom-20 md:bottom-8 right-8 z-40">
-        <!-- Hızlı eylem menüsü burada -->
+        <div id="quick-action-menu" class="flex flex-col items-center space-y-3 mb-3 transition-all duration-300 transform scale-0 opacity-0 origin-bottom">
+            <button id="quick-add-expense" class="bg-red-500 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg hover:bg-red-600 transition-transform transform hover:scale-110" title="Gider Ekle"><i class="fa-solid fa-arrow-trend-down text-xl"></i></button>
+            <button id="quick-add-income" class="bg-green-500 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg hover:bg-green-600 transition-transform transform hover:scale-110" title="Gelir Ekle"><i class="fa-solid fa-arrow-trend-up text-xl"></i></button>
+        </div>
+        <button id="add-transaction-btn" class="bg-indigo-600 text-white rounded-full w-16 h-16 flex items-center justify-center shadow-lg hover:bg-indigo-700 transition-transform transform hover:scale-110 hidden"><i id="add-transaction-icon" class="fa-solid fa-plus text-2xl transition-transform duration-300"></i></button>
     </div>
 
     <!-- External Libraries -->
