@@ -1,155 +1,91 @@
-/* General Body and Font */
+/* FinansPro Uygulaması için Tüm Stiller */
+
 body {
     font-family: 'Inter', sans-serif;
 }
-
-/* Animations */
 .fade-in {
     animation: fadeIn 0.5s ease-in-out;
 }
-
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(-10px); }
     to { opacity: 1; transform: translateY(0); }
 }
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
-/* Modal Styling */
 .modal-overlay {
     transition: opacity 0.3s ease;
 }
-
 .modal-container {
     transition: transform 0.3s ease;
 }
-
-/* Custom Scrollbar */
+/* Custom scrollbar */
 .custom-scrollbar::-webkit-scrollbar {
     width: 6px;
 }
-
 .custom-scrollbar::-webkit-scrollbar-track {
     background: transparent;
 }
-
 .custom-scrollbar::-webkit-scrollbar-thumb {
     background-color: #d1d5db; /* gray-300 */
     border-radius: 20px;
 }
-
 .dark .custom-scrollbar::-webkit-scrollbar-thumb {
     background-color: #4b5563; /* dark:gray-600 */
 }
-
-/* Transaction List Styling */
 .paid-transaction {
     text-decoration: line-through;
     opacity: 0.6;
 }
-
 .transaction-item .actions {
     opacity: 0;
     transition: opacity 0.2s ease-in-out;
 }
-
 .transaction-item:hover .actions {
     opacity: 1;
 }
-
-/* Sidebar & Mobile Navigation */
-.sidebar-link, .bottom-nav-link {
-    transition: background-color 0.2s, color 0.2s;
-}
-
-.sidebar-link.active {
-    background-color: #4f46e5; /* indigo-600 */
-    color: white;
-    font-weight: 600;
-}
-
-.sidebar-link.active i {
-    color: white;
-}
-
-.bottom-nav-link.active {
-    color: #4f46e5; /* indigo-600 */
-}
-.dark .bottom-nav-link.active {
-    color: #818cf8; /* dark:indigo-400 */
-}
-
-#sidebar.open {
-    transform: translateX(0);
-}
-
-/* Notes List Active Item */
+/* Notes list active item style */
 .note-list-item.active {
     background-color: #eef2ff; /* indigo-50 */
 }
-
 .dark .note-list-item.active {
     background-color: #3730a3; /* dark:indigo-800 */
 }
-
-/* Quill Rich Text Editor */
+/* Quill Editor Styling */
 #note-editor-container .ql-toolbar {
     border-top-left-radius: 0.5rem;
     border-top-right-radius: 0.5rem;
     border-color: #d1d5db; /* gray-300 */
 }
-
 #note-editor-container .ql-container {
     border-bottom-left-radius: 0.5rem;
     border-bottom-right-radius: 0.5rem;
     border-color: #d1d5db; /* gray-300 */
     font-size: 1rem;
 }
-
-.dark #note-editor-container .ql-toolbar, 
-.dark #note-editor-container .ql-container {
+.dark #note-editor-container .ql-toolbar, .dark #note-editor-container .ql-container {
     border-color: #4b5563; /* dark:gray-600 */
 }
-
 .dark #note-editor-container .ql-editor {
     color: #d1d5db; /* dark:text-gray-300 */
 }
-
 .dark #note-editor-container .ql-snow .ql-stroke {
     stroke: #9ca3af;
 }
-
 .dark #note-editor-container .ql-snow .ql-picker-label {
     color: #9ca3af;
 }
-
-/* Notification and Snackbar */
+/* Snackbar and Notification Styling */
 .notification-bar {
     transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
     transform: translateY(-100%);
     opacity: 0;
 }
-
 .notification-bar.show {
     transform: translateY(0);
     opacity: 1;
 }
-
-#undo-snackbar {
-    transform: translate(-50%, 100px);
-    opacity: 0;
-    transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
-    z-index: 40;
+/* Yükleme animasyonu için stil */
+@keyframes spin {
+    to { transform: rotate(360deg); }
 }
-
-#undo-snackbar.show {
-    transform: translate(-50%, 0);
-    opacity: 1;
-}
-
-/* Loading Spinner */
 .spinner {
     border: 4px solid rgba(255, 255, 255, 0.3);
     border-top-color: #fff;
@@ -158,24 +94,43 @@ body {
     height: 40px;
     animation: spin 1s linear infinite;
 }
-
-/* Quick Action Button */
+/* Geri Al Snackbar Stili */
+#undo-snackbar {
+    transform: translate(-50%, 100px);
+    opacity: 0;
+    transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+    z-index: 40;
+}
+#undo-snackbar.show {
+    transform: translate(-50%, 0);
+    opacity: 1;
+}
+/* Hızlı Eylem Butonu Stilleri */
 #add-transaction-icon.rotate-45 {
     transform: rotate(45deg);
 }
-
 #quick-action-menu {
     transition: transform 0.2s ease-out, opacity 0.2s ease-out;
 }
-
-/* Credit Card Theme Selection */
+/* Yeni Menü Stilleri */
+.sidebar-link {
+    transition: background-color 0.2s, color 0.2s;
+}
+.sidebar-link.active {
+    background-color: #4f46e5; /* indigo-600 */
+    color: white;
+    font-weight: 600;
+}
+.sidebar-link.active i {
+    color: white;
+}
+/* Kart Tema Seçimi Stili */
 input[name="cardTheme"]:checked + span {
     ring: 2px;
     ring-offset: 2px;
     --tw-ring-offset-color: #fff;
     --tw-ring-color: #6366f1;
 }
-
 .dark input[name="cardTheme"]:checked + span {
      --tw-ring-offset-color: #1e293b;
 }

@@ -3,29 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FinansPro | Finans Takip Uygulaması</title>
+    <title>Finans Takip Uygulaması</title>
+    
+    <!-- Tailwind CSS (CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
     
     <!-- Google Fonts: Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     
-    <!-- Font Awesome for icons -->
+    <!-- Font Awesome for icons (CDN) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     
-    <!-- Quill Rich Text Editor CSS -->
+    <!-- Chart.js and ApexCharts (CDN) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    
+    <!-- Quill Rich Text Editor (CDN) -->
     <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
-    
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Custom CSS -->
+    <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+
+    <!-- Harici CSS dosyasını bağlıyoruz -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200 transition-colors duration-300">
 
     <!-- Yükleme Ekranı -->
-    <div id="loading-overlay" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[110] hidden">
+    <div id="loading-overlay" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 hidden">
         <div class="spinner"></div>
     </div>
 
@@ -36,9 +41,10 @@
 
     <!-- Ana Konteyner -->
     <div id="app">
+
         <!-- Giriş ve Kayıt Ekranı -->
         <div id="auth-screen" class="fade-in min-h-screen flex items-center justify-center p-4">
-             <div class="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-xl w-full max-w-md mx-auto">
+            <div class="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-xl w-full max-w-md mx-auto">
                 <h1 class="text-3xl font-bold text-center mb-2 text-indigo-600 dark:text-indigo-400">FinansPro</h1>
                 <p class="text-center text-slate-500 dark:text-slate-400 mb-8">Hesabınıza giriş yapın veya yeni hesap oluşturun.</p>
                 <div class="flex border-b border-slate-200 dark:border-slate-700 mb-6">
@@ -72,18 +78,9 @@
         </div>
 
         <!-- Ana Uygulama Ekranı -->
-        <div id="main-app-screen" class="hidden">
-            <!-- Mobil için Üst Bar -->
-            <header id="mobile-header" class="md:hidden sticky top-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm z-30 p-4 flex justify-between items-center shadow-md">
-                <h1 id="mobile-page-title" class="text-xl font-bold text-indigo-600 dark:text-indigo-400">Finans Panelim</h1>
-                <button id="hamburger-btn" class="text-2xl text-slate-700 dark:text-slate-300">
-                    <i class="fa-solid fa-bars"></i>
-                </button>
-            </header>
-
-            <!-- Yan Menü (Sidebar) -->
-            <div id="sidebar-overlay" class="md:hidden fixed inset-0 bg-black/50 z-40 hidden"></div>
-            <aside id="sidebar" class="w-64 bg-white dark:bg-slate-800 p-4 flex flex-col h-screen fixed shadow-lg z-50 transform -translate-x-full md:translate-x-0 transition-transform duration-300">
+        <div id="main-app-screen" class="hidden md:flex">
+            <!-- Sol Menü (Sidebar) -->
+            <aside class="w-64 bg-white dark:bg-slate-800 p-4 flex flex-col h-screen fixed shadow-lg">
                 <div class="text-2xl font-bold text-indigo-600 dark:text-indigo-400 mb-8 text-center">
                     <i class="fa-solid fa-chart-pie mr-2"></i>FinansPro
                 </div>
@@ -113,9 +110,8 @@
             </aside>
 
             <!-- Ana İçerik Alanı -->
-            <main class="md:ml-64 p-4 md:p-8 pb-24 md:pb-8">
-                <!-- Masaüstü Header -->
-                <header class="hidden md:flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
+            <main class="flex-1 md:ml-64 p-4 md:p-8">
+                <header class="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
                     <h1 id="page-title" class="text-4xl font-bold text-indigo-600 dark:text-indigo-400">Finans Panelim</h1>
                     <div class="flex items-center gap-2 flex-wrap justify-center">
                         <div class="relative">
@@ -184,7 +180,7 @@
                                 <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg flex flex-col lg:col-span-1"><h2 class="flex items-center gap-3 text-2xl font-bold mb-4 text-slate-700 dark:text-slate-300"><i class="fa-solid fa-tags"></i>Kategorileri Yönet</h2><form id="category-form" class="flex items-center gap-2 mb-4"><input type="text" name="categoryName" placeholder="Yeni Gider Kategorisi" required class="block w-full px-3 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm text-sm"><button type="submit" class="bg-indigo-500 text-white font-bold p-2 rounded-md hover:bg-indigo-600 text-sm flex-shrink-0"><i class="fa-solid fa-plus"></i></button></form><div id="custom-category-list" class="space-y-2 flex-grow overflow-y-auto custom-scrollbar pr-2"></div></div>
                                 <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg flex flex-col lg:col-span-2"><div class="flex justify-between items-center mb-4"><h2 class="flex items-center gap-3 text-2xl font-bold text-slate-700 dark:text-slate-300"><i class="fa-solid fa-bullseye"></i>Bütçe Yönetimi</h2><div class="flex items-center gap-3"><button id="ai-budget-suggestion-btn" class="text-sm bg-violet-500 text-white font-semibold py-1 px-3 rounded-md hover:bg-violet-600">✨ Akıllı Bütçe Önerileri</button><button id="add-budget-btn" class="text-sm bg-indigo-500 text-white font-semibold py-1 px-3 rounded-md hover:bg-indigo-600">+ Ekle</button><button id="toggle-budget-list-btn" class="text-slate-400 hover:text-indigo-500" title="Bütçeleri Gizle/Göster"><i class="fa-solid fa-chevron-up"></i></button></div></div><div id="budget-list" class="space-y-4 overflow-y-auto custom-scrollbar pr-2 flex-grow"></div></div>
                             </div>
-                            <!-- Gider Listeleri -->
+                            <!-- GÜNCELLENDİ: Gider Listeleri -->
                             <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
                                 <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg flex flex-col"><h2 class="flex items-center gap-3 text-3xl font-bold mb-4 text-green-500"><i class="fa-solid fa-circle-plus"></i>Gelirler</h2><div id="income-list" class="space-y-3 flex-grow mb-4 pr-2 overflow-y-auto max-h-[450px] custom-scrollbar"></div></div>
                                 <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg flex flex-col"><h2 class="flex items-center gap-3 text-3xl font-bold mb-4 text-red-500"><i class="fa-solid fa-building-columns"></i>Sabit Giderler</h2><div id="fixed-expense-list" class="space-y-3 flex-grow mb-4 pr-2 overflow-y-auto max-h-[450px] custom-scrollbar"></div></div>
@@ -200,22 +196,22 @@
                         </div>
                     </div>
 
-                    <!-- ÖDEMELER SAYFASI -->
+                    <!-- GÜNCELLENDİ: ÖDEMELER SAYFASI -->
                     <div id="odemeler-page" class="page hidden fade-in">
                          <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                            <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg">
-                                <h3 class="text-lg font-semibold text-slate-500 dark:text-slate-400 mb-2">Toplam Kredi Kartı Borcu</h3>
-                                <p id="total-card-debt" class="text-3xl font-bold text-red-500">0.00 ₺</p>
-                            </div>
                              <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg">
-                                <h3 class="text-lg font-semibold text-slate-500 dark:text-slate-400 mb-2">Toplam Asgari Ödeme</h3>
-                                <p id="total-minimum-payment" class="text-3xl font-bold text-yellow-500">0.00 ₺</p>
-                            </div>
-                            <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg">
-                                <h3 class="text-lg font-semibold text-slate-500 dark:text-slate-400 mb-2">Toplam Diğer Borçlar</h3>
-                                <p id="total-manual-debt" class="text-3xl font-bold text-orange-500">0.00 ₺</p>
-                            </div>
-                        </div>
+                                 <h3 class="text-lg font-semibold text-slate-500 dark:text-slate-400 mb-2">Toplam Kredi Kartı Borcu</h3>
+                                 <p id="total-card-debt" class="text-3xl font-bold text-red-500">0.00 ₺</p>
+                             </div>
+                             <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg">
+                                 <h3 class="text-lg font-semibold text-slate-500 dark:text-slate-400 mb-2">Toplam Asgari Ödeme</h3>
+                                 <p id="total-minimum-payment" class="text-3xl font-bold text-yellow-500">0.00 ₺</p>
+                             </div>
+                             <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg">
+                                 <h3 class="text-lg font-semibold text-slate-500 dark:text-slate-400 mb-2">Toplam Diğer Borçlar</h3>
+                                 <p id="total-manual-debt" class="text-3xl font-bold text-orange-500">0.00 ₺</p>
+                             </div>
+                         </div>
 
                         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                             <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg">
@@ -241,54 +237,35 @@
                         </div>
                     </div>
 
-                    <!-- RAPORLAR SAYFASI (YENİ) -->
+                    <!-- RAPORLAR SAYFASI (Placeholder) -->
                     <div id="raporlar-page" class="page hidden fade-in">
-                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                            <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg">
-                                <h3 class="text-xl font-bold text-slate-700 dark:text-slate-300 mb-4">Aylık Nakit Akışı (Son 6 Ay)</h3>
-                                <div id="cash-flow-chart-container" class="h-80"></div>
-                            </div>
-                            <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg">
-                                <h3 class="text-xl font-bold text-slate-700 dark:text-slate-300 mb-4">Bu Dönemki Harcama Dağılımı</h3>
-                                <div id="category-treemap-container" class="h-80"></div>
-                            </div>
+                        <div class="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-lg text-center">
+                            <i class="fa-solid fa-chart-simple text-6xl text-indigo-400 mb-4"></i>
+                            <h2 class="text-2xl font-bold mb-2">Raporlar</h2>
+                            <p class="text-slate-500">Detaylı finansal raporlar ve analizler yakında bu sayfada olacak.</p>
                         </div>
                     </div>
 
-                    <!-- HEDEFLER SAYFASI (YENİ) -->
+                    <!-- HEDEFLER SAYFASI (Placeholder) -->
                     <div id="hedefler-page" class="page hidden fade-in">
-                        <div class="flex justify-end mb-6">
-                            <button id="add-goal-btn" class="bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-700 transition-transform transform hover:scale-105 text-sm">
-                                <i class="fa-solid fa-plus mr-2"></i>Yeni Hedef Ekle
-                            </button>
-                        </div>
-                        <div id="goal-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            <!-- Hedef kartları buraya gelecek -->
+                        <div class="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-lg text-center">
+                            <i class="fa-solid fa-bullseye text-6xl text-indigo-400 mb-4"></i>
+                            <h2 class="text-2xl font-bold mb-2">Hedefler</h2>
+                            <p class="text-slate-500">Finansal hedefler belirleyip takibini yapabileceğiniz alan yakında burada olacak.</p>
                         </div>
                     </div>
                 </div>
             </main>
-            
-            <!-- Mobil için Alt Navigasyon -->
-            <nav id="bottom-nav" class="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-800 shadow-[0_-2px_5px_rgba(0,0,0,0.1)] dark:shadow-[0_-2px_5px_rgba(0,0,0,0.3)] flex justify-around z-30">
-                <a href="#" class="bottom-nav-link active flex-1 flex flex-col items-center justify-center p-2 text-indigo-600" data-page="finans-paneli-page">
-                    <i class="fa-solid fa-house text-xl"></i>
-                    <span class="text-xs font-medium">Panel</span>
-                </a>
-                <a href="#" class="bottom-nav-link flex-1 flex flex-col items-center justify-center p-2 text-slate-500" data-page="odemeler-page">
-                    <i class="fa-solid fa-credit-card text-xl"></i>
-                    <span class="text-xs font-medium">Ödemeler</span>
-                </a>
-                <a href="#" class="bottom-nav-link flex-1 flex flex-col items-center justify-center p-2 text-slate-500" data-page="raporlar-page">
-                    <i class="fa-solid fa-chart-simple text-xl"></i>
-                    <span class="text-xs font-medium">Raporlar</span>
-                </a>
-                <a href="#" class="bottom-nav-link flex-1 flex flex-col items-center justify-center p-2 text-slate-500" data-page="hedefler-page">
-                    <i class="fa-solid fa-bullseye text-xl"></i>
-                    <span class="text-xs font-medium">Hedefler</span>
-                </a>
-            </nav>
         </div>
+    </div>
+
+    <!-- Geliştirilmiş Sabit Ekle Butonu ve Hızlı Eylem Menüsü -->
+    <div class="fixed bottom-8 right-8 z-40">
+        <div id="quick-action-menu" class="flex flex-col items-center space-y-3 mb-3 transition-all duration-300 transform scale-0 opacity-0 origin-bottom">
+            <button id="quick-add-expense" class="bg-red-500 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg hover:bg-red-600 transition-transform transform hover:scale-110" title="Gider Ekle"><i class="fa-solid fa-arrow-trend-down text-xl"></i></button>
+            <button id="quick-add-income" class="bg-green-500 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg hover:bg-green-600 transition-transform transform hover:scale-110" title="Gelir Ekle"><i class="fa-solid fa-arrow-trend-up text-xl"></i></button>
+        </div>
+        <button id="add-transaction-btn" class="bg-indigo-600 text-white rounded-full w-16 h-16 flex items-center justify-center shadow-lg hover:bg-indigo-700 transition-transform transform hover:scale-110 hidden"><i id="add-transaction-icon" class="fa-solid fa-plus text-2xl transition-transform duration-300"></i></button>
     </div>
 
     <!-- Modallar -->
@@ -316,7 +293,7 @@
             </form>
         </div>
     </div>
-    <!-- Kredi Kartı Ekleme/Düzenleme Modalı -->
+    <!-- GÜNCELLENDİ: Kredi Kartı Ekleme/Düzenleme Modalı -->
     <div id="credit-card-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden modal-overlay">
         <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-lg p-8 w-full max-w-md modal-container transform scale-95">
             <h3 id="credit-card-modal-title" class="text-2xl font-bold mb-6">Yeni Kredi Kartı Ekle</h3>
@@ -370,7 +347,7 @@
             </form>
         </div>
     </div>
-    <!-- Kredi Kartı Detay Modalı -->
+    <!-- GÜNCELLENDİ: Kredi Kartı Detay Modalı -->
     <div id="card-details-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden modal-overlay">
         <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-lg p-6 w-full max-w-3xl modal-container transform scale-95 flex flex-col h-[85vh]">
             <div class="flex justify-between items-center mb-4 flex-shrink-0">
@@ -421,61 +398,9 @@
     </div>
     <div id="undo-snackbar" class="fixed bottom-8 left-1/2 bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-800 px-6 py-3 rounded-lg shadow-lg flex items-center gap-4"><span id="undo-message">İşlem ödendi olarak işaretlendi.</span><button id="undo-btn" class="font-bold text-indigo-400 dark:text-indigo-600 hover:underline">Geri Al</button></div>
 
-    <!-- HEDEF MODALLARI (YENİ) -->
-    <div id="goal-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden modal-overlay">
-        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-lg p-8 w-full max-w-md modal-container transform scale-95">
-            <h3 id="goal-modal-title" class="text-2xl font-bold mb-6">Yeni Hedef Ekle</h3>
-            <form id="goal-form" class="space-y-4">
-                <input type="hidden" name="goalId">
-                <div>
-                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Hedef Adı</label>
-                    <input type="text" name="goalName" required placeholder="Yaz Tatili, Yeni Bilgisayar vb." class="mt-1 block w-full px-3 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Hedef Tutar</label>
-                    <input type="number" name="targetAmount" step="0.01" required placeholder="10000" class="mt-1 block w-full px-3 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm">
-                </div>
-                <div class="flex justify-end space-x-4 pt-4">
-                    <button type="button" id="cancel-goal-btn" class="px-6 py-2 rounded-lg bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 font-semibold">İptal</button>
-                    <button type="submit" class="px-6 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 font-semibold">Kaydet</button>
-                </div>
-            </form>
-        </div>
-    </div>
 
-    <div id="add-funds-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden modal-overlay">
-        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-lg p-8 w-full max-w-sm modal-container transform scale-95">
-            <h3 id="add-funds-modal-title" class="text-2xl font-bold mb-6">Para Ekle/Çek</h3>
-            <form id="add-funds-form" class="space-y-4">
-                <input type="hidden" name="goalId">
-                <div>
-                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Tutar</label>
-                    <input type="number" name="amount" step="0.01" required class="mt-1 block w-full px-3 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm">
-                </div>
-                <div class="flex justify-end space-x-4 pt-4">
-                    <button type="button" id="withdraw-funds-btn" class="px-6 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 font-semibold">Çek</button>
-                    <button type="submit" id="add-funds-submit-btn" class="px-6 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 font-semibold">Ekle</button>
-                </div>
-                <button type="button" id="cancel-add-funds-btn" class="w-full mt-2 px-6 py-2 rounded-lg bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 font-semibold">İptal</button>
-            </form>
-        </div>
-    </div>
-
-    <!-- Sabit Ekle Butonu -->
-    <div class="fixed bottom-20 md:bottom-8 right-8 z-40">
-        <div id="quick-action-menu" class="flex flex-col items-center space-y-3 mb-3 transition-all duration-300 transform scale-0 opacity-0 origin-bottom">
-            <button id="quick-add-expense" class="bg-red-500 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg hover:bg-red-600 transition-transform transform hover:scale-110" title="Gider Ekle"><i class="fa-solid fa-arrow-trend-down text-xl"></i></button>
-            <button id="quick-add-income" class="bg-green-500 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg hover:bg-green-600 transition-transform transform hover:scale-110" title="Gelir Ekle"><i class="fa-solid fa-arrow-trend-up text-xl"></i></button>
-        </div>
-        <button id="add-transaction-btn" class="bg-indigo-600 text-white rounded-full w-16 h-16 flex items-center justify-center shadow-lg hover:bg-indigo-700 transition-transform transform hover:scale-110 hidden"><i id="add-transaction-icon" class="fa-solid fa-plus text-2xl transition-transform duration-300"></i></button>
-    </div>
-
-    <!-- External Libraries -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
-    <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
-
-    <!-- Custom JavaScript with Firebase -->
-    <script src="script.js" type="module"></script>
+    <!-- Harici JavaScript dosyasını bağlıyoruz -->
+    <!-- 'defer' attribute'u, HTML'in tamamı yüklendikten sonra script'in çalışmasını sağlar -->
+    <script type="module" src="script.js" defer></script>
 </body>
 </html>
