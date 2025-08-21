@@ -59,7 +59,6 @@ const categoryForm = document.getElementById('category-form');
 const customCategoryList = document.getElementById('custom-category-list');
 const budgetList = document.getElementById('budget-list');
 const themeToggleBtn = document.getElementById('theme-toggle-btn');
-const chartContainer = document.getElementById('chart-container');
 const reminderBanner = document.getElementById('reminder-banner');
 const reminderList = document.getElementById('reminder-list');
 const closeReminderBtn = document.getElementById('close-reminder-btn');
@@ -176,6 +175,7 @@ let undoTimeoutId = null;
 const defaultIncomeCategories = ['Maaş', 'Ek Gelir', 'Diğer Gelir'];
 const defaultFixedExpenseCategories = ['Kira', 'Fatura', 'Kredi', 'Abonelik'];
 const defaultIrregularExpenseCategories = ['Market', 'Ulaşım', 'Eğlence', 'Sağlık', 'Diğer Gider'];
+const DEFAULT_DASHBOARD_LAYOUT = ['summary', 'cashflow', 'expenseChart'];
 
 // --- GEMINI API FONKSİYONU ---
 async function callGemini(prompt, isJson = false) {
@@ -345,10 +345,10 @@ async function loadSettings() {
         userSettings = {
             paymentDay: data.paymentDay || 1,
             accountBalance: data.accountBalance || 0,
-            dashboardLayout: data.dashboardLayout || null
+            dashboardLayout: data.dashboardLayout || DEFAULT_DASHBOARD_LAYOUT
         };
     } else {
-        userSettings = { paymentDay: 1, accountBalance: 0, dashboardLayout: null };
+        userSettings = { paymentDay: 1, accountBalance: 0, dashboardLayout: DEFAULT_DASHBOARD_LAYOUT };
     }
     updateBalanceDisplay();
     renderDashboardLayout();
@@ -593,19 +593,212 @@ receiptFileInput.addEventListener('change', async (event) => {
 });
 
 // 4. Hedefler
-// ... (Hedefler için fonksiyonlar buraya eklenecek)
+function loadGoals() {
+    if (!currentUserId) return;
+    if (goalsUnsubscribe) goalsUnsubscribe();
+    const q = query(collection(db, `artifacts/${appId}/users/${currentUserId}/goals`), orderBy("targetAmount", "desc"));
+    return new Promise((resolve) => {
+        goalsUnsubscribe = onSnapshot(q, (snapshot) => {
+            allGoals = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            displayGoals();
+            resolve();
+        }, error => {
+            console.error("Hedefler yüklenemedi:", error);
+            resolve();
+        });
+    });
+}
+
+function displayGoals() {
+    goalList.innerHTML = '';
+    if (allGoals.length === 0) {
+        goalList.innerHTML = '<p class="text-slate-500 text-sm text-center md:col-span-2 lg:col-span-3">Henüz bir hedef belirlemediniz.</p>';
+        return;
+    }
+    allGoals.forEach(goal => {
+        const percentage = (goal.currentAmount / goal.targetAmount) * 100;
+        const goalEl = document.createElement('div');
+        goalEl.className = 'bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-lg flex flex-col';
+        goalEl.innerHTML = `
+            <div class="flex justify-between items-start mb-2">
+                <h3 class="font-bold text-lg text-slate-800 dark:text-slate-200">${goal.goalName}</h3>
+                <div>
+                    <button data-id="${goal.id}" class="edit-goal-btn text-slate-400 hover:text-indigo-500 text-xs"><i class="fa-solid fa-pencil"></i></button>
+                    <button data-id="${goal.id}" class="delete-goal-btn text-slate-400 hover:text-red-500 text-xs ml-2"><i class="fa-solid fa-trash-can"></i></button>
+                </div>
+            </div>
+            <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5 mb-2">
+                <div class="bg-green-500 h-2.5 rounded-full" style="width: ${Math.min(percentage, 100)}%"></div>
+            </div>
+            <div class="text-sm text-slate-500 dark:text-slate-400 text-right mt-auto">
+                <span class="font-semibold text-slate-700 dark:text-slate-300">${goal.currentAmount.toFixed(2)} ₺</span> / ${goal.targetAmount.toFixed(2)} ₺
+            </div>
+        `;
+        goalList.appendChild(goalEl);
+    });
+    // Add event listeners for edit/delete
+}
+
+addGoalBtn.addEventListener('click', () => {
+    goalForm.reset();
+    goalForm.goalId.value = '';
+    document.getElementById('goal-modal-title').textContent = 'Yeni Hedef Ekle';
+    goalModal.classList.remove('hidden');
+});
+cancelGoalBtn.addEventListener('click', () => goalModal.classList.add('hidden'));
+goalForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const goalId = e.target.goalId.value;
+    const goalData = {
+        goalName: e.target.goalName.value,
+        targetAmount: parseFloat(e.target.targetAmount.value),
+        currentAmount: parseFloat(e.target.currentAmount.value) || 0,
+    };
+    if (!goalData.goalName || isNaN(goalData.targetAmount)) {
+        showNotification('Lütfen tüm gerekli alanları doldurun.');
+        return;
+    }
+    try {
+        if (goalId) {
+            await updateDoc(doc(db, `artifacts/${appId}/users/${currentUserId}/goals`, goalId), goalData);
+        } else {
+            await addDoc(collection(db, `artifacts/${appId}/users/${currentUserId}/goals`), goalData);
+        }
+        goalModal.classList.add('hidden');
+    } catch (error) {
+        console.error("Hedef kaydedilemedi:", error);
+        showNotification('Hedef kaydedilemedi.');
+    }
+});
 
 // 5. Yatırımlar
-// ... (Yatırımlar için fonksiyonlar buraya eklenecek)
+function loadInvestments() {
+    if (!currentUserId) return;
+    if (investmentsUnsubscribe) investmentsUnsubscribe();
+    const q = query(collection(db, `artifacts/${appId}/users/${currentUserId}/investments`), orderBy("assetName"));
+    return new Promise((resolve) => {
+        investmentsUnsubscribe = onSnapshot(q, (snapshot) => {
+            allInvestments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            displayInvestments();
+            resolve();
+        }, error => {
+            console.error("Yatırımlar yüklenemedi:", error);
+            resolve();
+        });
+    });
+}
+
+function displayInvestments() {
+    investmentList.innerHTML = '';
+     if (allInvestments.length === 0) {
+        investmentList.innerHTML = '<p class="text-slate-500 text-sm text-center">Henüz bir yatırım eklemediniz.</p>';
+        return;
+    }
+    allInvestments.forEach(inv => {
+        const totalValue = inv.quantity * inv.purchasePrice; // Placeholder, will be updated with live data
+        const invEl = document.createElement('div');
+        invEl.className = 'bg-white dark:bg-slate-800 p-4 rounded-xl shadow-lg flex items-center justify-between';
+        invEl.innerHTML = `
+            <div>
+                <p class="font-bold text-lg">${inv.assetName} <span class="text-sm font-normal text-slate-500">${inv.assetType}</span></p>
+                <p class="text-sm text-slate-500">${inv.quantity} adet @ ${inv.purchasePrice.toFixed(2)} ₺</p>
+            </div>
+            <div class="text-right">
+                <p class="font-bold text-xl text-green-500">${totalValue.toFixed(2)} ₺</p>
+                <p class="text-sm text-green-600">(+0.00%)</p> <!-- Placeholder for live data -->
+            </div>
+        `;
+        investmentList.appendChild(invEl);
+    });
+}
+addInvestmentBtn.addEventListener('click', () => {
+    investmentForm.reset();
+    investmentForm.investmentId.value = '';
+    document.getElementById('investment-modal-title').textContent = 'Yeni Yatırım Ekle';
+    investmentModal.classList.remove('hidden');
+});
+cancelInvestmentBtn.addEventListener('click', () => investmentModal.classList.add('hidden'));
+investmentForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const invId = e.target.investmentId.value;
+    const invData = {
+        assetName: e.target.assetName.value.toUpperCase(),
+        assetType: e.target.assetType.value,
+        quantity: parseFloat(e.target.quantity.value),
+        purchasePrice: parseFloat(e.target.purchasePrice.value),
+    };
+    if (!invData.assetName || isNaN(invData.quantity) || isNaN(invData.purchasePrice)) {
+        showNotification('Lütfen tüm alanları doğru doldurun.');
+        return;
+    }
+    try {
+        if (invId) {
+            await updateDoc(doc(db, `artifacts/${appId}/users/${currentUserId}/investments`, invId), invData);
+        } else {
+            await addDoc(collection(db, `artifacts/${appId}/users/${currentUserId}/investments`), invData);
+        }
+        investmentModal.classList.add('hidden');
+    } catch (error) {
+        console.error("Yatırım kaydedilemedi:", error);
+        showNotification('Yatırım kaydedilemedi.');
+    }
+});
 
 // 6. Özelleştirilebilir Panel
 function renderDashboardLayout() {
-    // ... (Panel düzeni için fonksiyonlar buraya eklenecek)
+    const layout = userSettings.dashboardLayout || DEFAULT_DASHBOARD_LAYOUT;
+    dashboardGrid.innerHTML = ''; // Clear existing grid
+
+    layout.forEach(cardType => {
+        let cardHTML = '';
+        switch (cardType) {
+            case 'summary':
+                cardHTML = `
+                    <div class="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6" data-id="summary">
+                        <div class="relative overflow-hidden bg-gradient-to-br from-green-400 to-green-600 p-6 rounded-2xl shadow-xl text-white transition-transform transform hover:-translate-y-1"><div class="absolute -right-4 -bottom-4 opacity-20"><i class="fa-solid fa-wallet text-8xl"></i></div><h2 class="text-lg font-semibold text-green-100 mb-2">Bu Dönemki Gelir</h2><p id="total-income" class="text-3xl font-bold">0.00 ₺</p></div>
+                        <div class="relative overflow-hidden bg-gradient-to-br from-red-400 to-red-600 p-6 rounded-2xl shadow-xl text-white transition-transform transform hover:-translate-y-1"><div class="absolute -right-4 -bottom-4 opacity-20"><i class="fa-solid fa-receipt text-8xl"></i></div><h2 class="text-lg font-semibold text-red-100 mb-2">Bu Dönemki Gider</h2><p id="total-expense" class="text-3xl font-bold">0.00 ₺</p></div>
+                        <div class="md:col-span-2 relative overflow-hidden bg-gradient-to-br from-indigo-500 to-indigo-700 p-6 rounded-2xl shadow-xl text-white transition-transform transform hover:-translate-y-1"><div class="absolute -right-4 -bottom-4 opacity-20"><i class="fa-solid fa-scale-balanced text-8xl"></i></div><h2 class="text-lg font-semibold text-indigo-100 mb-2">Genel Bakiye</h2><p id="balance" class="text-4xl font-bold">0.00 ₺</p></div>
+                    </div>`;
+                break;
+            case 'cashflow':
+                cardHTML = `
+                    <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-xl" data-id="cashflow">
+                        <h2 class="text-xl font-bold text-slate-700 dark:text-slate-300 mb-4">Nakit Akışı Tahmini (30 Gün)</h2>
+                        <div id="cash-flow-chart-container" class="h-64"></div>
+                    </div>`;
+                break;
+            case 'expenseChart':
+                cardHTML = `
+                    <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-xl" data-id="expenseChart">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-xl font-bold text-slate-700 dark:text-slate-300">Dönemlik Gider Dağılımı</h2>
+                        </div>
+                        <div id="chart-container" class="relative h-64"><canvas id="expenseChart"></canvas></div>
+                    </div>`;
+                break;
+        }
+        dashboardGrid.innerHTML += cardHTML;
+    });
+    
+    // Initialize SortableJS after rendering
+    new Sortable(dashboardGrid, {
+        animation: 150,
+        handle: 'h2', // Draggable by the title
+        onEnd: async function (evt) {
+            const newLayout = [...dashboardGrid.children].map(item => item.dataset.id);
+            userSettings.dashboardLayout = newLayout;
+            const docRef = doc(db, `artifacts/${appId}/users/${currentUserId}/settings/main`);
+            await setDoc(docRef, { dashboardLayout: newLayout }, { merge: true });
+        },
+    });
+    
+    // Re-render charts and update summary after layout is built
+    renderDashboardCharts();
+    updateSummary();
 }
 
-// 7. Ortak Bütçe
-// ... (Ortak bütçe için fonksiyonlar buraya eklenecek)
-
-// --- MEVCUT FONKSİYONLARIN GÜNCELLENMESİ ---
-// ... (Mevcut fonksiyonlarda yapılan küçük değişiklikler)
+// 7. Ortak Bütçe (Placeholder for future implementation)
+// This feature requires significant changes to the data structure and security rules.
+// It involves creating a shared "budgets" collection that multiple users can access.
+// This is a complex feature and is noted here as a placeholder.
 
