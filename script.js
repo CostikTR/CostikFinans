@@ -295,10 +295,16 @@ onAuthStateChanged(auth, async (user) => {
         addTransactionBtn.classList.remove('hidden');
         
         toggleLoading(true);
-        navigateTo('finans-paneli-page');
-        initializeQuillEditor();
-        await loadAllData();
-        toggleLoading(false);
+        try {
+            navigateTo('finans-paneli-page');
+            initializeQuillEditor();
+            await loadAllData();
+        } catch (error) {
+            console.error("Uygulama yüklenirken bir hata oluştu:", error);
+            showNotification("Veriler yüklenirken bir hata oluştu. Lütfen sayfayı yenileyin.");
+        } finally {
+            toggleLoading(false); // Hata olsa bile yükleme ekranını kaldır
+        }
 
     } else {
         currentUserId = null;
@@ -636,7 +642,30 @@ function displayGoals() {
         `;
         goalList.appendChild(goalEl);
     });
-    // Add event listeners for edit/delete
+    
+    goalList.querySelectorAll('.edit-goal-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const goalId = e.currentTarget.dataset.id;
+            const goal = allGoals.find(g => g.id === goalId);
+            if (goal) openEditGoalModal(goal);
+        });
+    });
+
+    goalList.querySelectorAll('.delete-goal-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            openDeleteModal(e.currentTarget.dataset.id, 'goal');
+        });
+    });
+}
+
+function openEditGoalModal(goal) {
+    goalForm.reset();
+    goalForm.goalId.value = goal.id;
+    document.getElementById('goal-modal-title').textContent = 'Hedefi Düzenle';
+    goalForm.goalName.value = goal.goalName;
+    goalForm.targetAmount.value = goal.targetAmount;
+    goalForm.currentAmount.value = goal.currentAmount;
+    goalModal.classList.remove('hidden');
 }
 
 addGoalBtn.addEventListener('click', () => {
@@ -699,18 +728,48 @@ function displayInvestments() {
         const invEl = document.createElement('div');
         invEl.className = 'bg-white dark:bg-slate-800 p-4 rounded-xl shadow-lg flex items-center justify-between';
         invEl.innerHTML = `
-            <div>
+            <div class="flex-grow">
                 <p class="font-bold text-lg">${inv.assetName} <span class="text-sm font-normal text-slate-500">${inv.assetType}</span></p>
                 <p class="text-sm text-slate-500">${inv.quantity} adet @ ${inv.purchasePrice.toFixed(2)} ₺</p>
             </div>
-            <div class="text-right">
+            <div class="text-right mx-4">
                 <p class="font-bold text-xl text-green-500">${totalValue.toFixed(2)} ₺</p>
                 <p class="text-sm text-green-600">(+0.00%)</p> <!-- Placeholder for live data -->
+            </div>
+            <div>
+                <button data-id="${inv.id}" class="edit-investment-btn text-slate-400 hover:text-indigo-500 text-xs"><i class="fa-solid fa-pencil"></i></button>
+                <button data-id="${inv.id}" class="delete-investment-btn text-slate-400 hover:text-red-500 text-xs ml-2"><i class="fa-solid fa-trash-can"></i></button>
             </div>
         `;
         investmentList.appendChild(invEl);
     });
+
+    investmentList.querySelectorAll('.edit-investment-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const invId = e.currentTarget.dataset.id;
+            const investment = allInvestments.find(i => i.id === invId);
+            if (investment) openEditInvestmentModal(investment);
+        });
+    });
+
+    investmentList.querySelectorAll('.delete-investment-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            openDeleteModal(e.currentTarget.dataset.id, 'investment');
+        });
+    });
 }
+
+function openEditInvestmentModal(inv) {
+    investmentForm.reset();
+    investmentForm.investmentId.value = inv.id;
+    document.getElementById('investment-modal-title').textContent = 'Yatırımı Düzenle';
+    investmentForm.assetName.value = inv.assetName;
+    investmentForm.assetType.value = inv.assetType;
+    investmentForm.quantity.value = inv.quantity;
+    investmentForm.purchasePrice.value = inv.purchasePrice;
+    investmentModal.classList.remove('hidden');
+}
+
 addInvestmentBtn.addEventListener('click', () => {
     investmentForm.reset();
     investmentForm.investmentId.value = '';
@@ -754,24 +813,24 @@ function renderDashboardLayout() {
         switch (cardType) {
             case 'summary':
                 cardHTML = `
-                    <div class="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6" data-id="summary">
-                        <div class="relative overflow-hidden bg-gradient-to-br from-green-400 to-green-600 p-6 rounded-2xl shadow-xl text-white transition-transform transform hover:-translate-y-1"><div class="absolute -right-4 -bottom-4 opacity-20"><i class="fa-solid fa-wallet text-8xl"></i></div><h2 class="text-lg font-semibold text-green-100 mb-2">Bu Dönemki Gelir</h2><p id="total-income" class="text-3xl font-bold">0.00 ₺</p></div>
-                        <div class="relative overflow-hidden bg-gradient-to-br from-red-400 to-red-600 p-6 rounded-2xl shadow-xl text-white transition-transform transform hover:-translate-y-1"><div class="absolute -right-4 -bottom-4 opacity-20"><i class="fa-solid fa-receipt text-8xl"></i></div><h2 class="text-lg font-semibold text-red-100 mb-2">Bu Dönemki Gider</h2><p id="total-expense" class="text-3xl font-bold">0.00 ₺</p></div>
-                        <div class="md:col-span-2 relative overflow-hidden bg-gradient-to-br from-indigo-500 to-indigo-700 p-6 rounded-2xl shadow-xl text-white transition-transform transform hover:-translate-y-1"><div class="absolute -right-4 -bottom-4 opacity-20"><i class="fa-solid fa-scale-balanced text-8xl"></i></div><h2 class="text-lg font-semibold text-indigo-100 mb-2">Genel Bakiye</h2><p id="balance" class="text-4xl font-bold">0.00 ₺</p></div>
+                    <div class="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6 dashboard-card" data-id="summary">
+                        <div class="relative overflow-hidden bg-gradient-to-br from-green-400 to-green-600 p-6 rounded-2xl shadow-xl text-white transition-transform transform hover:-translate-y-1"><div class="absolute -right-4 -bottom-4 opacity-20"><i class="fa-solid fa-wallet text-8xl"></i></div><h2 class="text-lg font-semibold text-green-100 mb-2 cursor-move">Bu Dönemki Gelir</h2><p id="total-income" class="text-3xl font-bold">0.00 ₺</p></div>
+                        <div class="relative overflow-hidden bg-gradient-to-br from-red-400 to-red-600 p-6 rounded-2xl shadow-xl text-white transition-transform transform hover:-translate-y-1"><div class="absolute -right-4 -bottom-4 opacity-20"><i class="fa-solid fa-receipt text-8xl"></i></div><h2 class="text-lg font-semibold text-red-100 mb-2 cursor-move">Bu Dönemki Gider</h2><p id="total-expense" class="text-3xl font-bold">0.00 ₺</p></div>
+                        <div class="md:col-span-2 relative overflow-hidden bg-gradient-to-br from-indigo-500 to-indigo-700 p-6 rounded-2xl shadow-xl text-white transition-transform transform hover:-translate-y-1"><div class="absolute -right-4 -bottom-4 opacity-20"><i class="fa-solid fa-scale-balanced text-8xl"></i></div><h2 class="text-lg font-semibold text-indigo-100 mb-2 cursor-move">Genel Bakiye</h2><p id="balance" class="text-4xl font-bold">0.00 ₺</p></div>
                     </div>`;
                 break;
             case 'cashflow':
                 cardHTML = `
-                    <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-xl" data-id="cashflow">
-                        <h2 class="text-xl font-bold text-slate-700 dark:text-slate-300 mb-4">Nakit Akışı Tahmini (30 Gün)</h2>
+                    <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-xl dashboard-card" data-id="cashflow">
+                        <h2 class="text-xl font-bold text-slate-700 dark:text-slate-300 mb-4 cursor-move">Nakit Akışı Tahmini (30 Gün)</h2>
                         <div id="cash-flow-chart-container" class="h-64"></div>
                     </div>`;
                 break;
             case 'expenseChart':
                 cardHTML = `
-                    <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-xl" data-id="expenseChart">
+                    <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-xl dashboard-card" data-id="expenseChart">
                         <div class="flex justify-between items-center mb-4">
-                            <h2 class="text-xl font-bold text-slate-700 dark:text-slate-300">Dönemlik Gider Dağılımı</h2>
+                            <h2 class="text-xl font-bold text-slate-700 dark:text-slate-300 cursor-move">Dönemlik Gider Dağılımı</h2>
                         </div>
                         <div id="chart-container" class="relative h-64"><canvas id="expenseChart"></canvas></div>
                     </div>`;
@@ -802,3 +861,5 @@ function renderDashboardLayout() {
 // It involves creating a shared "budgets" collection that multiple users can access.
 // This is a complex feature and is noted here as a placeholder.
 
+// --- MEVCUT FONKSİYONLARIN GÜNCELLENMESİ ---
+// ... (Diğer mevcut fonksiyonlar)
