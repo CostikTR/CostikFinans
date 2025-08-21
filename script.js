@@ -337,7 +337,13 @@ async function loadAllData() {
         loadGoals(),
         loadInvestments()
     ]);
-    await loadTransactions(); // Transactions depend on other data, so load last
+    
+    // Render the dashboard layout now that settings are available
+    renderDashboardLayout();
+    
+    // Now load transactions, which will populate the UI elements
+    await loadTransactions(); 
+    
     initializeBudgetToggle();
 }
 
@@ -357,7 +363,6 @@ async function loadSettings() {
         userSettings = { paymentDay: 1, accountBalance: 0, dashboardLayout: DEFAULT_DASHBOARD_LAYOUT };
     }
     updateBalanceDisplay();
-    renderDashboardLayout();
 }
 
 settingsBtn.addEventListener('click', () => {
