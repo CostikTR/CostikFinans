@@ -1,68 +1,10 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, collection, addDoc, query, onSnapshot, doc, deleteDoc, updateDoc, serverTimestamp, orderBy, writeBatch, getDoc, setDoc, getDocs, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { auth, db, appId } from './core/firebase.js';
+import { showNotification, toggleLoading, formatCurrency, debounce } from './core/utils.js';
+import { fetchCurrentPriceTRY } from './features/pricing.js';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { collection, addDoc, query, onSnapshot, doc, deleteDoc, updateDoc, serverTimestamp, orderBy, writeBatch, getDoc, setDoc, getDocs, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// Firebase config ve init (canlıda env'e taşıyın)
-const firebaseConfig = {
-    apiKey: "AIzaSyDx17NJkAZknMvRyDlNuFYaMdlMGFa-QmQ",
-    authDomain: "finans-sitem.firebaseapp.com",
-    databaseURL: "https://finans-sitem-default-rtdb.firebaseio.com",
-    projectId: "finans-sitem",
-    storageBucket: "finans-sitem.appspot.com",
-    messagingSenderId: "117402758273",
-    appId: "1:117402758273:web:93a296f43e393352057180",
-    measurementId: "G-WLLK7B3WB5"
-};
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-
-// Yardımcılar (utils)
-function showNotification(message, type = 'error') {
-    const bar = document.getElementById('notification-bar');
-    const msg = document.getElementById('notification-message');
-    if (!bar || !msg) return;
-    bar.classList.remove('bg-green-500', 'bg-sky-500', 'bg-red-500');
-    msg.textContent = message;
-    if (type === 'success') bar.classList.add('bg-green-500');
-    else if (type === 'info') bar.classList.add('bg-sky-500');
-    else bar.classList.add('bg-red-500');
-    bar.classList.add('show');
-    setTimeout(() => bar.classList.remove('show'), 3000);
-}
-function toggleLoading(show) {
-    const overlay = document.getElementById('loading-overlay');
-    if (!overlay) return;
-    overlay.classList.toggle('hidden', !show);
-}
-function formatCurrency(amount) {
-    return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(amount);
-}
-
-// Gemini API (butonlara basınca çalışır)
-async function callGemini(prompt) {
-    let chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
-    const payload = { contents: chatHistory };
-    const apiKey = ""; // Env'e taşıyın
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
-    try {
-        const response = await fetch(apiUrl, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-        if (!response.ok) { console.error("API isteği başarısız:", response.status, await response.text()); return null; }
-        const result = await response.json();
-        if (result.candidates?.[0]?.content?.parts?.[0]?.text) {
-            return result.candidates[0].content.parts[0].text;
-        }
-        console.error("API yanıtı beklenen formatta değil:", result);
-        return null;
-    } catch (e) {
-        console.error("Gemini API hatası:", e);
-        return null;
-    }
-}
+// Firebase ve appId artık core/firebase içinden geliyor
 
 // --- DOM ELEMENTLERİ ---
 const loadingOverlay = document.getElementById('loading-overlay');
@@ -194,8 +136,6 @@ const cancelInvestmentBtn = document.getElementById('cancel-investment-btn');
 const investmentList = document.getElementById('investment-list');
 const portfolioAllocationCtx = document.getElementById('portfolioAllocationChart')?.getContext('2d');
 let portfolioAllocationChart;
-let priceAutoUpdateInterval = null;
-let didInitialAutoRefresh = false;
 
 // --- UYGULAMA DURUMU (STATE) ---
 let currentUserId = null;
@@ -231,7 +171,43 @@ let undoTimeoutId = null;
 // --- SABİTLER ---
 const defaultIncomeCategories = ['Maaş', 'Ek Gelir', 'Diğer Gelir'];
 const defaultFixedExpenseCategories = ['Kira', 'Fatura', 'Kredi', 'Abonelik'];
-const defaultIrregularExpenseCategories = ['Market', 'Ulaşım', 'Eğlence', 'Sağlık', 'Hedef Birikimi', 'Diğer Gider'];
+const defaultIrregularExpenseCategories = ['Market', 'Ulaşım', 'Eğlece', 'Sağlık', 'Hedef Birikimi', 'Diğer Gider'];
+
+// --- GEMINI API FONKSİYONU ---
+async function callGemini(prompt) {
+    let chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
+    const payload = { contents: chatHistory };
+    const apiKey = ""; // ÖNEMLİ: Bu anahtarı güvende tutun, Vercel Env Var'a taşıyın.
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
+
+    try {
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            console.error("API isteği başarısız oldu:", response.status, await response.text());
+            return null;
+        }
+
+        const result = await response.json();
+        
+        if (result.candidates && result.candidates.length > 0 &&
+            result.candidates[0].content && result.candidates[0].content.parts &&
+            result.candidates[0].content.parts.length > 0) {
+            return result.candidates[0].content.parts[0].text;
+        } else {
+            console.error("API yanıtında beklenen içerik bulunamadı:", result);
+            return null;
+        }
+    } catch (error) {
+        console.error("Gemini API'ye bağlanırken hata oluştu:", error);
+        return null;
+    }
+}
+
 
 // --- SAYFA NAVİGASYONU ---
 const pages = document.querySelectorAll('.page');
@@ -249,19 +225,29 @@ function navigateTo(pageId) {
         }
     });
 
-    // Raporlar sayfası geçişi: fonksiyon tanımlıysa çağır
-    if (pageId === 'raporlar-page' && typeof window.initializeAndRenderReports === 'function') {
-        window.initializeAndRenderReports();
+    // Eğer Raporlar sayfasına geçildiyse, raporları yükle ve render et
+    if (pageId === 'raporlar-page') {
+        // Bu fonksiyonun bir önceki adımda eklenmiş olması gerekir.
+        initializeAndRenderReports();
     }
     // Eğer Hedefler & Birikimler sayfasına geçildiyse, analizleri render et
     if (pageId === 'hedefler-page') {
         initializeAndRenderSavingsPage();
     }
     if (pageId === 'yatirimlar-page') {
-        initializeAndRenderInvestmentsPage();
-        startPortfolioAutoUpdate();
+        // Lazy-load investments module
+        (async () => {
+            const mod = await import('./features/investments.js');
+            if (currentUserId) {
+                mod.setInvestmentsUser(currentUserId);
+                mod.startInvestments();
+            }
+        })();
     } else {
-        if (priceAutoUpdateInterval) { clearInterval(priceAutoUpdateInterval); priceAutoUpdateInterval = null; }
+        // Stop live investments when leaving page
+        if (window.__investmentsModuleStop) {
+            try { window.__investmentsModuleStop(); } catch {}
+        }
     }
 }
 
@@ -292,6 +278,32 @@ navLinks.forEach(link => {
         }
     });
 });
+
+// Yardımcı fonksiyonlar core/utils içinden geliyor
+
+// --- TEMA YÖNETİMİ ---
+const applyTheme = (theme) => {
+    const icon = themeToggleBtn.querySelector('i');
+    if (theme === 'dark') {
+        document.documentElement.classList.add('dark');
+        icon.classList.replace('fa-moon', 'fa-sun');
+    } else {
+        document.documentElement.classList.remove('dark');
+        icon.classList.replace('fa-sun', 'fa-moon');
+    }
+    localStorage.setItem('theme', theme);
+    if (expenseChart) updateExpenseChart(allTransactions);
+};
+const toggleTheme = () => {
+    const newTheme = document.documentElement.classList.contains('dark') ? 'light' : 'dark';
+    applyTheme(newTheme);
+};
+const initializeTheme = () => {
+    const savedTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    applyTheme(savedTheme);
+};
+themeToggleBtn.addEventListener('click', toggleTheme);
+initializeTheme();
 
 // --- KİMLİK DOĞRULAMA (AUTHENTICATION) ---
 onAuthStateChanged(auth, async (user) => {
@@ -330,15 +342,14 @@ onAuthStateChanged(auth, async (user) => {
 // --- VERİ YÜKLEME ---
 async function loadAllData() {
     await Promise.all([
-        loadSettings(), // Load user settings
+        loadSettings(),
         loadCategories(),
         loadBudgets(),
         loadNotes(),
         loadCreditCards(),
         loadManualDebts(),
         loadGoals(),
-        loadSavingsHistory(),
-        loadInvestments()
+        loadSavingsHistory()
     ]);
     await loadTransactions();
 }
@@ -391,7 +402,7 @@ settingsForm.addEventListener('submit', async (e) => {
 // --- BAKİYE YÖNETİMİ ---
 function updateBalanceDisplay() {
     const balanceElement = document.getElementById('account-balance-card');
-        if (balanceElement) { // Update balance display
+    if (balanceElement) {
          balanceElement.textContent = `${userSettings.accountBalance.toFixed(2)} ₺`;
     }
     updateSummary();
@@ -942,7 +953,7 @@ function getPreviousFinancialCycle(paymentDay) {
 }
 function updateSummary() {
     const { startDate, endDate } = getCurrentFinancialCycle(userSettings.paymentDay);
-        const cycleTransactions = allTransactions.filter(tx => { const txDate = tx.createdAt?.toDate(); return txDate && txDate >= startDate && txDate <= endDate; }); // Filter transactions for the current cycle
+    const cycleTransactions = allTransactions.filter(tx => { const txDate = tx.createdAt?.toDate(); return txDate && txDate >= startDate && txDate <= endDate; });
     const totalIncome = cycleTransactions.filter(tx => tx.type === 'income').reduce((sum, tx) => sum + tx.amount, 0);
     const totalExpense = cycleTransactions.filter(tx => tx.type === 'expense').reduce((sum, tx) => sum + tx.amount, 0);
     
@@ -1687,6 +1698,15 @@ cancelCreditCardBtn.addEventListener('click', () => {
     creditCardModal.classList.add('hidden');
 });
 
+cardThemeSelector.addEventListener('change', (e) => {
+    if (e.target.name === 'cardTheme') {
+        cardThemeSelector.querySelectorAll('span').forEach(span => {
+            span.classList.remove('ring-2', 'ring-offset-2', 'ring-indigo-500', 'dark:ring-offset-slate-800');
+        });
+        e.target.nextElementSibling.classList.add('ring-2', 'ring-offset-2', 'ring-indigo-500', 'dark:ring-offset-slate-800');
+    }
+});
+
 creditCardForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const cardId = e.target.cardId.value;
@@ -1848,7 +1868,7 @@ cardDebtForm.addEventListener('submit', async (e) => {
         displayCreditCards();
     } catch (error) {
         console.error("Kart harcaması eklenemedi:", error);
-        showNotification('Harcama eklenedi.');
+        showNotification('Harcama eklenemedi.');
     }
 });
 
@@ -1995,7 +2015,7 @@ async function payManualDebt(debtId) {
         await deleteDoc(doc(db, `artifacts/${appId}/users/${currentUserId}/manualDebts`, debtId));
 
         showNotification('Borç kapatıldı ve gider olarak eklendi.', 'success');
-    } catch (error) {
+    } catch(error) {
         console.error("Borç kapatılamadı:", error);
         showNotification("Borç kapatılırken bir hata oluştu.");
     } finally {
@@ -2079,7 +2099,9 @@ function renderCardDebtChart(debts) {
                 responsive: true, 
                 maintainAspectRatio: false, 
                 plugins: { 
-                    legend: { position: 'bottom', labels: { color: document.documentElement.classList.contains('dark') ? '#d1d5db' : '#4b5563' } } 
+                    legend: { 
+                        display: false 
+                    } 
                 } 
             }
         });
@@ -2213,7 +2235,7 @@ const openGoalModal = (goal = null) => {
         goalForm.goalName.value = goal.name;
         goalForm.targetAmount.value = goal.targetAmount;
         goalForm.targetDate.value = goal.targetDate || '';
-        goalForm.goalIcon.value = goal.icon || 'fa-solid fa-bullseye';
+        goalForm.goalIcon.value = goal.icon || '';
     } else {
         goalModalTitle.textContent = 'Yeni Hedef';
     }
@@ -2443,142 +2465,37 @@ function renderSavingsDistributionChart() {
 
 // --- YATIRIMLAR SAYFASI FONKSİYONLARI ---
 
-const loadInvestments = () => {
-    return new Promise((resolve, reject) => {
-        if (!currentUserId) {
-            allInvestments = [];
-            return resolve();
-        }
-        if (investmentsUnsubscribe) investmentsUnsubscribe();
-        const q = query(collection(db, `artifacts/${appId}/users/${currentUserId}/investments`), orderBy("purchaseDate", "desc"));
-        investmentsUnsubscribe = onSnapshot(q, async (snapshot) => {
-            allInvestments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            // Re-render investments view live
-            initializeAndRenderInvestmentsPage();
-            // One-time auto refresh of live prices after initial data
-            if (!didInitialAutoRefresh) {
-                didInitialAutoRefresh = true;
-                try { await refreshAutoUpdatedInvestmentPricesOnce(); } catch {}
-            }
-            resolve();
-        }, (error) => {
-            console.error("Yatırımlar yüklenemedi:", error);
-            reject(error);
-        });
+
+// Veri ile çalışan alternatif grafik çizici; investments modülü burayı çağırır
+window.renderPortfolioAllocationChartWithData = function(investments) {
+    if (portfolioAllocationChart) portfolioAllocationChart.destroy();
+    if (!portfolioAllocationCtx) return;
+
+    const allocation = (investments || []).reduce((acc, inv) => {
+        const type = inv.assetType;
+        const value = (inv.quantity || 0) * (inv.currentPrice || 0);
+        if (!acc[type]) acc[type] = 0;
+        acc[type] += value;
+        return acc;
+    }, {});
+
+    const labels = Object.keys(allocation);
+    const data = Object.values(allocation);
+
+    portfolioAllocationChart = new Chart(portfolioAllocationCtx, {
+        type: 'doughnut',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Portföy Dağılımı', data,
+                backgroundColor: ['#3b82f6', '#10b981', '#f97316', '#8b5cf6', '#f59e0b', '#ec4899'],
+                borderColor: portfolioAllocationCtx.canvas.closest('.dark') ? '#1e293b' : '#ffffff',
+                borderWidth: 2,
+                hoverOffset: 4
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: portfolioAllocationCtx.canvas.closest('.dark') ? '#cbd5e1' : '#475569' } } } }
     });
-};
-
-function initializeAndRenderInvestmentsPage() {
-    if (!investmentList) return;
-    
-    renderPortfolioAllocationChart();
-    
-    let totalPortfolioValue = 0;
-    let totalCost = 0;
-    
-    investmentList.innerHTML = '';
-    
-    if (allInvestments.length === 0) {
-        investmentList.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-slate-500">Henüz yatırım eklemediniz.</td></tr>`;
-        document.getElementById('portfolio-total-value').textContent = formatCurrency(0);
-        document.getElementById('portfolio-total-pl').textContent = formatCurrency(0);
-        document.getElementById('portfolio-total-pl-percent').textContent = '';
-    } else {
-        // First, calculate the total portfolio value to determine asset weights
-        allInvestments.forEach(inv => {
-            const currentValue = inv.quantity * inv.currentPrice;
-            totalPortfolioValue += currentValue;
-            totalCost += inv.quantity * inv.purchasePrice;
-        });
-        
-        // Now, render each row with the calculated weight
-        allInvestments.forEach(inv => {
-            const cost = inv.quantity * inv.purchasePrice;
-            const currentValue = inv.quantity * inv.currentPrice;
-            const profitLoss = currentValue - cost;
-            const profitLossPercent = cost > 0 ? (profitLoss / cost) * 100 : 0;
-            const weight = totalPortfolioValue > 0 ? (currentValue / totalPortfolioValue) * 100 : 0;
-            const plClass = profitLoss >= 0 ? 'text-green-500' : 'text-red-500';
-            
-            const row = document.createElement('tr');
-            row.className = 'border-b dark:border-slate-700';
-            row.innerHTML = `
-                <td class="px-6 py-4 font-medium text-slate-900 dark:text-white">${inv.assetName}<span class="block text-xs text-slate-500">${inv.assetType}</span></td>
-                <td class="px-6 py-4">${formatCurrency(cost)}</td>
-                <td class="px-6 py-4">${formatCurrency(currentValue)}</td>
-                <td class="px-6 py-4">${weight.toFixed(2)}%</td>
-                <td class="px-6 py-4 font-semibold ${plClass}">
-                    ${formatCurrency(profitLoss)}
-                    <span class="block text-xs">(${profitLossPercent.toFixed(2)}%)</span>
-                </td>
-                <td class="px-6 py-4 text-right">
-                    <button data-id="${inv.id}" class="refresh-price-btn text-slate-400 hover:text-sky-600 mr-3" title="Fiyatı güncelle"><i class="fa-solid fa-rotate"></i></button>
-                    <button data-id="${inv.id}" class="sell-investment-btn text-emerald-600 hover:text-emerald-700 mr-3" title="Sat"><i class="fa-solid fa-cart-shopping"></i></button>
-                    <button data-id="${inv.id}" class="edit-investment-btn text-slate-400 hover:text-indigo-500 mr-2"><i class="fa-solid fa-pencil"></i></button>
-                    <button data-id="${inv.id}" class="delete-investment-btn text-slate-400 hover:text-red-500"><i class="fa-solid fa-trash-can"></i></button>
-                </td>
-            `;
-            investmentList.appendChild(row);
-        });
-        
-        // Update summary cards
-        document.getElementById('portfolio-total-value').textContent = formatCurrency(totalPortfolioValue);
-        const totalPL = totalPortfolioValue - totalCost;
-        const totalPLPercent = totalCost > 0 ? (totalPL / totalCost) * 100 : 0;
-        const totalPLEl = document.getElementById('portfolio-total-pl');
-        const totalPLPercentEl = document.getElementById('portfolio-total-pl-percent');
-
-        totalPLEl.textContent = formatCurrency(totalPL);
-        totalPLEl.parentElement.className = `text-3xl font-bold ${totalPL >= 0 ? 'text-green-500' : 'text-red-500'}`;
-        
-        totalPLPercentEl.textContent = `(${totalPLPercent.toFixed(2)}%)`;
-        totalPLPercentEl.className = `text-lg font-semibold ml-2`;
-    }
-    
-    investmentList.querySelectorAll('.edit-investment-btn').forEach(btn => btn.addEventListener('click', (e) => openInvestmentModal(e.currentTarget.dataset.id)));
-    investmentList.querySelectorAll('.delete-investment-btn').forEach(btn => btn.addEventListener('click', (e) => openDeleteModal(e.currentTarget.dataset.id, 'investment')));
-    investmentList.querySelectorAll('.refresh-price-btn').forEach(btn => btn.addEventListener('click', async (e) => {
-        const inv = allInvestments.find(i => i.id === e.currentTarget.dataset.id);
-        if (!inv) return;
-    const price = await fetchCurrentPriceTRY(inv.priceProvider, (inv.symbol || ''));
-        if (typeof price === 'number') {
-            try { await updateDoc(doc(db, `artifacts/${appId}/users/${currentUserId}/investments`, inv.id), { currentPrice: price }); initializeAndRenderInvestmentsPage(); } catch {}
-        } else {
-            showNotification(`Fiyat alınamadı. Sağlayıcı: ${inv.priceProvider}, Sembol: ${inv.symbol || '-'}`);
-        }
-    }));
-    investmentList.querySelectorAll('.sell-investment-btn').forEach(btn => btn.addEventListener('click', async (e) => {
-        const inv = allInvestments.find(i => i.id === e.currentTarget.dataset.id);
-        if (!inv) return;
-        const qtyStr = prompt(`Satılacak miktarı girin (elde: ${inv.quantity}):`, String(inv.quantity));
-        if (qtyStr === null) return;
-        const qty = parseFloat(qtyStr);
-        if (!(qty > 0) || qty > inv.quantity) { showNotification('Geçersiz miktar.'); return; }
-        const proceeds = qty * inv.currentPrice;
-        try {
-            await runTransaction(db, async (tx) => {
-                const settingsRef = doc(db, `artifacts/${appId}/users/${currentUserId}/settings/main`);
-                const settingsSnap = await tx.get(settingsRef);
-                const currentBal = settingsSnap.exists() ? (settingsSnap.data().accountBalance || 0) : 0;
-                tx.update(settingsRef, { accountBalance: currentBal + proceeds });
-                if (qty === inv.quantity) {
-                    tx.delete(doc(db, `artifacts/${appId}/users/${currentUserId}/investments`, inv.id));
-                } else {
-                    const remainingQty = inv.quantity - qty;
-                    tx.update(doc(db, `artifacts/${appId}/users/${currentUserId}/investments`, inv.id), { quantity: remainingQty });
-                }
-                const txRef = doc(collection(db, `artifacts/${appId}/users/${currentUserId}/transactions`));
-                tx.set(txRef, { description: `${inv.assetName} satışı (${qty})`, amount: proceeds, category: 'Ek Gelir', type: 'income', createdAt: serverTimestamp() });
-            });
-            userSettings.accountBalance += proceeds;
-            updateBalanceDisplay();
-            initializeAndRenderInvestmentsPage();
-            showNotification('Satış gerçekleştirildi ve bakiyeye eklendi.', 'success');
-        } catch (err) {
-            console.error(err);
-            showNotification('Satış işlemi tamamlanamadı.');
-        }
-    }));
 }
 
 function renderPortfolioAllocationChart() {
@@ -2625,16 +2542,9 @@ function openInvestmentModal(investmentId = null) {
         investmentForm.purchasePrice.value = investment.purchasePrice;
         investmentForm.currentPrice.value = investment.currentPrice;
         investmentForm.purchaseDate.value = investment.purchaseDate;
-        // Symbol is stored in the text input; for dropdown providers, we'll sync below
-        if (investmentForm.symbol) investmentForm.symbol.value = investment.symbol || '';
-        investmentForm.priceProvider.value = investment.priceProvider || 'manual';
-        investmentForm.autoUpdate.checked = !!investment.autoUpdate;
     } else {
         investmentModalTitle.textContent = 'Yeni Yatırım Ekle';
     }
-    // Adjust UI based on provider and set dropdowns from existing symbol
-    try { updateProviderUIFromState(); } catch {}
-    updateInvestmentTotalCost();
     investmentModal.classList.remove('hidden');
 }
 
@@ -2645,9 +2555,6 @@ function closeInvestmentModal() {
 async function handleInvestmentFormSubmit(e) {
     e.preventDefault();
     const investmentId = e.target.investmentId.value;
-    // Resolve provider and symbol from UI (dropdowns or text)
-    const provider = e.target.priceProvider?.value || 'manual';
-    const resolvedSymbol = resolveSymbolFromUI();
     const data = {
         assetName: e.target.assetName.value,
         assetType: e.target.assetType.value,
@@ -2655,300 +2562,213 @@ async function handleInvestmentFormSubmit(e) {
         purchasePrice: parseFloat(e.target.purchasePrice.value),
         currentPrice: parseFloat(e.target.currentPrice.value),
         purchaseDate: e.target.purchaseDate.value,
-        symbol: (resolvedSymbol || '').trim(),
-        priceProvider: provider,
-        autoUpdate: e.target.autoUpdate?.checked || false,
     };
 
     try {
-        // Basic validations
-        if (!data.assetName || !data.purchaseDate) {
-            showNotification('Lütfen varlık adı ve alış tarihini girin.');
-            return;
-        }
-        if (!(data.quantity > 0)) {
-            showNotification('Lütfen geçerli bir miktar girin.');
-            return;
-        }
-        if (!(data.purchasePrice > 0)) {
-            showNotification('Lütfen geçerli bir alış fiyatı girin.');
-            return;
-        }
-
-        if (data.priceProvider !== 'manual') {
-            if (!data.symbol) {
-                showNotification('Lütfen geçerli bir sembol/kod seçin.');
-                return;
-            }
-        }
-
-        // If provider is not manual and currentPrice is invalid, try to fetch a live price
-        if (data.priceProvider !== 'manual') {
-            if (!(data.currentPrice > 0)) {
-                const live = await fetchCurrentPriceTRY(data.priceProvider, data.symbol);
-                if (typeof live === 'number') {
-                    data.currentPrice = live;
-                } else {
-                    showNotification(`Güncel fiyat alınamadı. Sağlayıcı: ${data.priceProvider}, Sembol: ${data.symbol || '-'}.`);
-                    return;
-                }
-            }
+        if (investmentId) {
+            await updateDoc(doc(db, `artifacts/${appId}/users/${currentUserId}/investments`, investmentId), data);
         } else {
-            // Manual: require a valid currentPrice
-            if (!(data.currentPrice > 0)) {
-                showNotification('Manuel sağlayıcı için güncel fiyat girin.');
-                return;
-            }
-        }
-
-        const useBalance = e.target.useBalance?.checked;
-        const totalCost = (data.quantity || 0) * (data.purchasePrice || 0);
-        if (!investmentId && useBalance) {
-            if (userSettings.accountBalance < totalCost) {
-                showNotification('Yetersiz bakiye. Bakiyeden düşmek için yeterli tutar yok.');
-                return;
-            }
-            await runTransaction(db, async (tx) => {
-                const settingsRef = doc(db, `artifacts/${appId}/users/${currentUserId}/settings/main`);
-                const newInvRef = doc(collection(db, `artifacts/${appId}/users/${currentUserId}/investments`));
-        const txRef = doc(collection(db, `artifacts/${appId}/users/${currentUserId}/transactions`));
-                const settingsSnap = await tx.get(settingsRef);
-                const currentBal = settingsSnap.exists() ? (settingsSnap.data().accountBalance || 0) : 0;
-                if (currentBal < totalCost) throw new Error('INSUFFICIENT_BALANCE');
-                tx.set(newInvRef, data);
-                tx.update(settingsRef, { accountBalance: currentBal - totalCost });
-        // Optional: record the buy as an expense for reports
-        tx.set(txRef, { description: `${data.assetName} alımı (${data.quantity})`, amount: totalCost, category: 'Diğer Gider', type: 'expense', isPaid: true, createdAt: serverTimestamp() });
-                userSettings.accountBalance = currentBal - totalCost; // local update
-            });
-            updateBalanceDisplay();
-        } else {
-            if (investmentId) {
-                await updateDoc(doc(db, `artifacts/${appId}/users/${currentUserId}/investments`, investmentId), data);
-            } else {
-                await addDoc(collection(db, `artifacts/${appId}/users/${currentUserId}/investments`), data);
-            }
+            await addDoc(collection(db, `artifacts/${appId}/users/${currentUserId}/investments`), data);
         }
     closeInvestmentModal();
-    // Re-render handled by onSnapshot; keep manual render as safety in case not on that page
-    initializeAndRenderInvestmentsPage();
     } catch (error) {
         console.error("Yatırım kaydedilemedi:", error);
         showNotification("Yatırım kaydedilirken bir hata oluştu.", "error");
     }
 }
 
-// --- Investment modal helpers and live price updates ---
+// =================================================================================
+// RAPORLAR SAYFASI İŞLEVSELLİĞİ
+// =================================================================================
 
-function updateInvestmentTotalCost() {
-    const qty = parseFloat(investmentForm.quantity.value) || 0;
-    const price = parseFloat(investmentForm.purchasePrice.value) || 0;
-    const el = document.getElementById('investment-total-cost');
-    if (el) el.textContent = formatCurrency(qty * price);
+// Raporlar sayfası için DOM Elemanları
+const reportStartDateInput = document.getElementById('report-start-date');
+const reportEndDateInput = document.getElementById('report-end-date');
+const applyDateFilterBtn = document.getElementById('apply-date-filter-btn');
+const exportPdfBtn = document.getElementById('export-report-pdf-btn');
+
+const reportTotalIncomeEl = document.getElementById('report-total-income');
+const reportTotalExpenseEl = document.getElementById('report-total-expense');
+const reportNetBalanceEl = document.getElementById('report-net-balance');
+const reportTransactionCountEl = document.getElementById('report-transaction-count');
+
+const incomeExpenseTrendCtx = document.getElementById('incomeExpenseTrendChart')?.getContext('2d');
+const expenseCategoryCtx = document.getElementById('expenseCategoryChart')?.getContext('2d');
+const reportTableBody = document.getElementById('report-table-body');
+
+// Grafiklerin tekrar tekrar çizilmesini önlemek için referanslarını tutalım
+let incomeExpenseTrendChart;
+let expenseCategoryChart;
+
+/**
+ * Raporlar sayfasını verilen işlemlere göre render eder.
+ * @param {Array} transactionsToReport - Raporlanacak işlem verileri.
+ */
+function renderReports(transactionsToReport) {
+    const totalIncome = transactionsToReport.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+    const totalExpense = transactionsToReport.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+    const netBalance = totalIncome - totalExpense;
+
+    reportTotalIncomeEl.textContent = formatCurrency(totalIncome);
+    reportTotalExpenseEl.textContent = formatCurrency(totalExpense);
+    reportNetBalanceEl.textContent = formatCurrency(netBalance);
+    reportTransactionCountEl.textContent = transactionsToReport.length;
+
+    renderIncomeExpenseTrendChart(transactionsToReport);
+    renderExpenseCategoryChart(transactionsToReport.filter(t => t.type === 'expense'));
+    renderReportTable(transactionsToReport);
 }
 
-['quantity','purchasePrice'].forEach(name => {
-    const input = investmentForm?.querySelector(`input[name="${name}"]`);
-    if (input) input.addEventListener('input', updateInvestmentTotalCost);
+/**
+ * Aylık gelir-gider trendini gösteren çizgi grafiği oluşturur.
+ * @param {Array} transactions - Filtrelenmiş işlem verileri.
+ */
+function renderIncomeExpenseTrendChart(transactions) {
+    if (incomeExpenseTrendChart) incomeExpenseTrendChart.destroy();
+    
+    const monthlyData = transactions.reduce((acc, t) => {
+        const date = t.createdAt?.toDate() || new Date(t.dueDate);
+        const month = date.toISOString().slice(0, 7);
+        if (!acc[month]) acc[month] = { income: 0, expense: 0 };
+        if (t.type === 'income') acc[month].income += t.amount;
+        else acc[month].expense += t.amount;
+        return acc;
+    }, {});
+
+    const sortedMonths = Object.keys(monthlyData).sort();
+    const labels = sortedMonths.map(month => new Date(month + '-02').toLocaleString('tr-TR', { month: 'long', year: 'numeric' }));
+    const incomeData = sortedMonths.map(month => monthlyData[month].income);
+    const expenseData = sortedMonths.map(month => monthlyData[month].expense);
+
+    incomeExpenseTrendChart = new Chart(incomeExpenseTrendCtx, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Gelir', data: incomeData, borderColor: 'rgba(34, 197, 94, 1)',
+                backgroundColor: 'rgba(34, 197, 94, 0.1)', fill: true, tension: 0.4,
+            }, {
+                label: 'Gider', data: expenseData, borderColor: 'rgba(239, 68, 68, 1)',
+                backgroundColor: 'rgba(239, 68, 68, 0.1)', fill: true, tension: 0.4,
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { callback: (value) => formatCurrency(value) } } } }
+    });
+}
+
+/**
+ * Giderlerin kategorik dağılımını gösteren dairesel grafiği oluşturur.
+ * @param {Array} expenseTransactions - Filtrelenmiş gider işlemleri.
+ */
+function renderExpenseCategoryChart(expenseTransactions) {
+    if (expenseCategoryChart) expenseCategoryChart.destroy();
+
+    const categoryData = expenseTransactions.reduce((acc, t) => {
+        acc[t.category] = (acc[t.category] || 0) + t.amount;
+        return acc;
+    }, {});
+
+    const labels = Object.keys(categoryData);
+    const data = Object.values(categoryData);
+
+    expenseCategoryChart = new Chart(expenseCategoryCtx, {
+        type: 'doughnut',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Gider Dağılımı', data,
+                backgroundColor: ['#ef4444', '#f97316', '#eab308', '#84cc16', '#22c55e', '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9', '#3b82f6', '#6366f1', '#8b5cf6', '#a855f7'],
+                hoverOffset: 4
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+    });
+}
+
+/**
+ * Raporlar sayfasındaki işlem tablosunu doldurur.
+ * @param {Array} transactions - Filtrelenmiş işlem verileri.
+ */
+function renderReportTable(transactions) {
+    reportTableBody.innerHTML = '';
+    if (transactions.length === 0) {
+        reportTableBody.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-slate-500">Bu kriterlere uygun işlem bulunamadı.</td></tr>`;
+        return;
+    }
+    const sorted = transactions.sort((a, b) => (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0));
+    sorted.forEach(t => {
+        const row = document.createElement('tr');
+        row.className = 'hover:bg-slate-50 dark:hover:bg-slate-700/50';
+        const typeClass = t.type === 'income' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400';
+        const sign = t.type === 'income' ? '+' : '-';
+        const date = t.createdAt?.toDate() || new Date(t.dueDate);
+        row.innerHTML = `
+            <td class="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">${date.toLocaleDateString('tr-TR')}</td>
+            <td class="px-4 py-3 text-sm font-semibold ${typeClass}">${t.type === 'income' ? 'Gelir' : 'Gider'}</td>
+            <td class="px-4 py-3 font-medium text-slate-800 dark:text-slate-200">${t.description}</td>
+            <td class="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">${t.category}</td>
+            <td class="px-4 py-3 text-right font-semibold ${typeClass}">${sign} ${formatCurrency(t.amount)}</td>
+        `;
+        reportTableBody.appendChild(row);
+    });
+}
+
+/**
+ * Raporlar sayfasını ilk açıldığında veya filtreleme yapıldığında tetiklenir.
+ */
+function initializeAndRenderReports() {
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(endDate.getDate() - 30);
+    reportStartDateInput.valueAsDate = startDate;
+    reportEndDateInput.valueAsDate = endDate;
+    applyDateFilterBtn.click();
+}
+
+applyDateFilterBtn.addEventListener('click', () => {
+    const startDate = reportStartDateInput.valueAsDate;
+    const endDate = reportEndDateInput.valueAsDate;
+    if (!startDate || !endDate) {
+        showNotification('Lütfen başlangıç ve bitiş tarihi seçin.', 'error');
+        return;
+    }
+    endDate.setHours(23, 59, 59, 999);
+    const filtered = allTransactions.filter(t => {
+        const transactionDate = t.createdAt?.toDate() || new Date(t.dueDate);
+        return transactionDate >= startDate && transactionDate <= endDate;
+    });
+    renderReports(filtered);
 });
 
-cancelInvestmentBtn?.addEventListener('click', () => closeInvestmentModal());
-addNewInvestmentBtn?.addEventListener('click', () => openInvestmentModal());
-investmentForm?.addEventListener('submit', handleInvestmentFormSubmit);
-
-// Fetch current price based on provider and symbol; returns price in TRY when possible
-async function fetchCurrentPriceTRY(provider, symbol) {
-    provider = provider || 'manual';
-    if (!symbol || provider === 'manual') return null;
-    try {
-        if (provider === 'coingecko') {
-            // Allow common ticker shortcuts (BTC -> bitcoin, etc.)
-            const tickerToId = {
-                BTC: 'bitcoin', ETH: 'ethereum', BNB: 'binancecoin', XRP: 'ripple', SOL: 'solana', ADA: 'cardano',
-                DOGE: 'dogecoin', AVAX: 'avalanche-2', TRX: 'tron', DOT: 'polkadot', MATIC: 'matic-network',
-                LINK: 'chainlink', ATOM: 'cosmos', XLM: 'stellar', XMR: 'monero', ETC: 'ethereum-classic',
-                USDT: 'tether', USDC: 'usd-coin', TON: 'the-open-network', BCH: 'bitcoin-cash', SHIB: 'shiba-inu',
-                PEPE: 'pepe'
-            };
-            const id = tickerToId[symbol.toUpperCase()] || symbol.toLowerCase();
-            const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${encodeURIComponent(id)}&vs_currencies=try`);
-            if (!res.ok) throw new Error('coingecko');
-            const data = await res.json();
-            const price = data?.[id]?.try;
-            return typeof price === 'number' ? price : null;
-        }
-        if (provider === 'forex') {
-            // exchangerate.host converts base to TRY: we want 1 unit of symbol in TRY
-            const res = await fetch(`https://api.exchangerate.host/latest?base=${encodeURIComponent(symbol.toUpperCase())}&symbols=TRY`);
-            if (!res.ok) throw new Error('forex');
-            const data = await res.json();
-            const price = data?.rates?.TRY;
-            return typeof price === 'number' ? price : null;
-        }
-        if (provider === 'metals') {
-            // Robust metals pricing via USD base; compute TRY per XAU/XAG and convert oz->gram
-            const OZ_TO_GRAM = 31.1034768;
-            const res = await fetch(`https://api.exchangerate.host/latest?base=USD&symbols=TRY,XAU,XAG`);
-            if (!res.ok) throw new Error('metals');
-            const data = await res.json();
-            const tryPerUsd = data?.rates?.TRY;
-            const xauPerUsd = data?.rates?.XAU; // XAU per 1 USD
-            const xagPerUsd = data?.rates?.XAG; // XAG per 1 USD
-            if (!(tryPerUsd > 0)) return null;
-            const tryPerXauOunce = xauPerUsd > 0 ? tryPerUsd / xauPerUsd : null; // TRY per 1 XAU (oz)
-            const tryPerXagOunce = xagPerUsd > 0 ? tryPerUsd / xagPerUsd : null; // TRY per 1 XAG (oz)
-            if (symbol === 'ons_altin') return tryPerXauOunce;
-            if (symbol === 'gram_altin' || symbol === 'ceyrek_altin' || symbol === 'yarim_altin' || symbol === 'tam_altin') {
-                if (!(tryPerXauOunce > 0)) return null;
-                const gramGold = tryPerXauOunce / OZ_TO_GRAM;
-                if (symbol === 'gram_altin') return gramGold;
-                if (symbol === 'ceyrek_altin') return gramGold * 1.75;
-                if (symbol === 'yarim_altin') return gramGold * 3.5;
-                if (symbol === 'tam_altin') return gramGold * 7;
-                return gramGold;
-            }
-            if (symbol === 'gram_gumus') {
-                if (!(tryPerXagOunce > 0)) return null;
-                return tryPerXagOunce / OZ_TO_GRAM;
-            }
-            return null;
-        }
-        return null;
-    } catch (e) {
-        console.warn('Fiyat alınamadı:', { provider, symbol, error: e });
-        return null;
-    }
-}
-
-async function tryAutoFillCurrentPrice() {
-    const provider = investmentForm.priceProvider?.value;
-    const symbol = (resolveSymbolFromUI() || '').trim().toLowerCase();
-    if (!provider || !symbol || provider === 'manual') return;
-    const price = await fetchCurrentPriceTRY(provider, symbol);
-    if (typeof price === 'number') {
-        if (investmentForm.currentPrice) investmentForm.currentPrice.value = price;
-        // Sync hidden symbol input for persistence
-        if (investmentForm.symbol) investmentForm.symbol.value = symbol;
-    }
-}
-
-// UI helpers for provider/symbol selection
-function getProviderUIEls() {
-    return {
-        providerSelect: document.getElementById('price-provider-select'),
-        symbolTextWrapper: document.getElementById('symbol-text-wrapper'),
-        symbolTextInput: document.getElementById('symbol-text-input'),
-        forexWrapper: document.getElementById('forex-select-wrapper'),
-        forexSelect: document.getElementById('forex-symbol-select'),
-        metalsWrapper: document.getElementById('metals-select-wrapper'),
-        metalsSelect: document.getElementById('metals-symbol-select'),
-        currentPriceWrapper: document.getElementById('current-price-wrapper'),
-        currentPriceInput: investmentForm.querySelector('input[name="currentPrice"]'),
-    };
-}
-
-function resolveSymbolFromUI() {
-    const els = getProviderUIEls();
-    const provider = investmentForm.priceProvider?.value || 'manual';
-    if (provider === 'forex' && els.forexSelect && !els.forexWrapper.classList.contains('hidden')) {
-        return els.forexSelect.value;
-    }
-    if (provider === 'metals' && els.metalsSelect && !els.metalsWrapper.classList.contains('hidden')) {
-        return els.metalsSelect.value;
-    }
-    return (investmentForm.symbol?.value || els.symbolTextInput?.value || '').trim();
-}
-
-function updateProviderUIFromState() {
-    const els = getProviderUIEls();
-    if (!els.providerSelect) return;
-    const provider = investmentForm.priceProvider?.value || 'manual';
-    // Toggle symbol inputs
-    const isForex = provider === 'forex';
-    const isMetals = provider === 'metals';
-    const isManual = provider === 'manual';
-    if (els.symbolTextWrapper) els.symbolTextWrapper.classList.toggle('hidden', isForex || isMetals);
-    if (els.forexWrapper) els.forexWrapper.classList.toggle('hidden', !isForex);
-    if (els.metalsWrapper) els.metalsWrapper.classList.toggle('hidden', !isMetals);
-    // Current price visibility: only manual requires manual input
-    if (els.currentPriceWrapper) els.currentPriceWrapper.classList.toggle('hidden', !isManual);
-    if (els.currentPriceInput) els.currentPriceInput.required = isManual;
-
-    // When editing, if we already have a symbol, select it in dropdowns; otherwise sync from dropdowns
-    const existingSymbol = (investmentForm.symbol?.value || '').trim();
-    if (isForex && els.forexSelect && els.forexWrapper) {
-        if (existingSymbol) {
-            els.forexSelect.value = existingSymbol;
-        } else if (investmentForm.symbol) {
-            investmentForm.symbol.value = els.forexSelect.value;
-        }
-    } else if (isMetals && els.metalsSelect && els.metalsWrapper) {
-        if (existingSymbol) {
-            els.metalsSelect.value = existingSymbol;
-        } else if (investmentForm.symbol) {
-            investmentForm.symbol.value = els.metalsSelect.value;
-        }
-    }
-}
-
-// Attach UI events once DOM is ready
-setTimeout(() => {
-    const els = getProviderUIEls();
-    if (els.providerSelect) {
-        els.providerSelect.addEventListener('change', () => { updateProviderUIFromState(); tryAutoFillCurrentPrice(); });
-    }
-    if (els.forexSelect) {
-        els.forexSelect.addEventListener('change', () => { if (investmentForm.symbol) investmentForm.symbol.value = els.forexSelect.value; tryAutoFillCurrentPrice(); });
-    }
-    if (els.metalsSelect) {
-        els.metalsSelect.addEventListener('change', () => { if (investmentForm.symbol) investmentForm.symbol.value = els.metalsSelect.value; tryAutoFillCurrentPrice(); });
-    }
-    if (els.symbolTextInput) {
-        els.symbolTextInput.addEventListener('blur', tryAutoFillCurrentPrice);
-    }
-    // Initialize UI state
-    updateProviderUIFromState();
-}, 0);
-
-function startPortfolioAutoUpdate() {
-    if (priceAutoUpdateInterval) clearInterval(priceAutoUpdateInterval);
-    // Update every 60 seconds for autoUpdate-enabled investments
-    priceAutoUpdateInterval = setInterval(async () => {
-        const autoInv = allInvestments.filter(i => i.autoUpdate && i.symbol && i.priceProvider && i.priceProvider !== 'manual');
-        if (autoInv.length === 0) return;
-        let updated = false;
-        for (const inv of autoInv) {
-            const price = await fetchCurrentPriceTRY(inv.priceProvider, (inv.symbol || ''));
-            if (typeof price === 'number' && price !== inv.currentPrice) {
-                try {
-                    await updateDoc(doc(db, `artifacts/${appId}/users/${currentUserId}/investments`, inv.id), { currentPrice: price });
-                    updated = true;
-                } catch (e) {
-                    console.warn('Fiyat güncellenemedi', inv.id, e);
-                }
-            }
-        }
-        if (updated) initializeAndRenderInvestmentsPage();
-    }, 60000);
-}
-
-// Start auto update when entering investments page
-document.addEventListener('click', (e) => {
-    const link = e.target.closest?.('.sidebar-link');
-    if (link && link.dataset.page === 'yatirimlar-page') {
-        setTimeout(() => { startPortfolioAutoUpdate(); }, 100);
-    }
+exportPdfBtn.addEventListener('click', () => {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    const startDate = reportStartDateInput.value;
+    const endDate = reportEndDateInput.value;
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Finans Raporu (${startDate} - ${endDate})`, 14, 20);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Toplam Gelir: ${reportTotalIncomeEl.textContent}`, 14, 30);
+    doc.text(`Toplam Gider: ${reportTotalExpenseEl.textContent}`, 14, 35);
+    doc.text(`Net Bakiye: ${reportNetBalanceEl.textContent}`, 14, 40);
+    doc.autoTable({ html: '#report-table-body', startY: 50, head: [['Tarih', 'Tip', 'Açıklama', 'Kategori', 'Tutar']], theme: 'grid' });
+    doc.save(`FinansPro-Rapor-${startDate}_${endDate}.pdf`);
 });
 
-// Also refresh once when investments are loaded
-async function refreshAutoUpdatedInvestmentPricesOnce() {
-    const autoInv = allInvestments.filter(i => i.autoUpdate && i.symbol && i.priceProvider && i.priceProvider !== 'manual');
-    for (const inv of autoInv) {
-        const price = await fetchCurrentPriceTRY(inv.priceProvider, (inv.symbol || ''));
-        if (typeof price === 'number' && price !== inv.currentPrice) {
-            try { await updateDoc(doc(db, `artifacts/${appId}/users/${currentUserId}/investments`, inv.id), { currentPrice: price }); } catch {}
-        }
-    }
-}
+// Hedefler Event Listeners
+addNewGoalBtn.addEventListener('click', () => openGoalModal());
+cancelGoalBtn.addEventListener('click', closeGoalModal);
+goalForm.addEventListener('submit', handleGoalFormSubmit);
+cancelAddFundsBtn.addEventListener('click', closeAddFundsModal);
+addFundsForm.addEventListener('submit', handleAddFundsFormSubmit);
 
-// Hook into loadInvestments completion by calling refresh in initializeAndRenderInvestmentsPage
+// Yatırımlar Event Listeners
+addNewInvestmentBtn.addEventListener('click', () => openInvestmentModal());
+cancelInvestmentBtn.addEventListener('click', closeInvestmentModal);
+investmentForm.addEventListener('submit', handleInvestmentFormSubmit);
+
+// Expose modal helpers for features/investments.js
+window.openInvestmentModal = openInvestmentModal;
+window.openDeleteModal = openDeleteModal;
+window.__investmentsModuleStop = () => { try { import('./features/investments.js').then(m => m.stopInvestments()); } catch {} };

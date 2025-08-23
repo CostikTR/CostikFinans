@@ -1,3 +1,4 @@
+// Genel yardımcı fonksiyonlar
 export function showNotification(message, type = 'error') {
   const bar = document.getElementById('notification-bar');
   const msg = document.getElementById('notification-message');
@@ -18,31 +19,24 @@ export function toggleLoading(show) {
 }
 
 export function formatCurrency(amount) {
-  return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(amount);
-}
-
-export function getCurrentFinancialCycle(paymentDay) {
-  const today = new Date();
-  const currentYear = today.getFullYear();
-  const currentMonth = today.getMonth();
-  const currentDay = today.getDate();
-  let startYear, startMonth, endYear, endMonth;
-  if (currentDay >= paymentDay) {
-    startYear = currentYear; startMonth = currentMonth;
-  } else {
-    startYear = currentMonth === 0 ? currentYear - 1 : currentYear;
-    startMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+  try {
+    return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(amount || 0);
+  } catch {
+    return `${(amount || 0).toFixed?.(2) ?? amount} ₺`;
   }
-  endYear = startMonth === 11 ? startYear + 1 : startYear;
-  endMonth = startMonth === 11 ? 0 : startMonth + 1;
-  const startDate = new Date(startYear, startMonth, paymentDay); startDate.setHours(0,0,0,0);
-  const endDate = new Date(endYear, endMonth, paymentDay - 1); endDate.setHours(23,59,59,999);
-  return { startDate, endDate };
 }
 
-export function getPreviousFinancialCycle(paymentDay) {
-  const { startDate: currentStart } = getCurrentFinancialCycle(paymentDay);
-  const endDate = new Date(currentStart); endDate.setDate(endDate.getDate() - 1); endDate.setHours(23,59,59,999);
-  const startDate = new Date(currentStart); startDate.setMonth(startDate.getMonth() - 1); startDate.setHours(0,0,0,0);
-  return { startDate, endDate };
+export function debounce(fn, wait = 250) {
+  let t;
+  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), wait); };
+}
+
+export function throttle(fn, limit = 250) {
+  let inThrottle = false; let lastArgs = null;
+  return (...args) => {
+    if (!inThrottle) {
+      fn(...args); inThrottle = true;
+      setTimeout(() => { inThrottle = false; if (lastArgs) { fn(...lastArgs); lastArgs = null; } }, limit);
+    } else { lastArgs = args; }
+  };
 }
