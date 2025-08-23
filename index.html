@@ -68,8 +68,8 @@
             </div>
         </div>
 
-        <div id="main-app-screen" class="hidden md:flex">
-            <aside class="w-64 bg-white dark:bg-slate-800 p-4 flex flex-col h-screen fixed shadow-lg">
+        <div id="main-app-screen" class="hidden">
+            <aside id="sidebar" class="w-64 bg-white dark:bg-slate-800 p-4 flex flex-col h-screen fixed shadow-lg z-30 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out">
                 <div class="text-2xl font-bold text-indigo-600 dark:text-indigo-400 mb-8 text-center">
                     <i class="fa-solid fa-chart-pie mr-2"></i>FinansPro
                 </div>
@@ -98,9 +98,15 @@
                 </div>
             </aside>
 
-            <main class="flex-1 md:ml-64 p-4 md:p-8">
+            <!-- Mobil kenar çubuğu açıkken arkaplanı karartmak için overlay -->
+            <div id="sidebar-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-20 hidden md:hidden"></div>
+
+            <main id="main-content" class="flex-1 md:ml-64 p-4 md:p-8 transition-all duration-300 ease-in-out">
                 <header class="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
-                    <h1 id="page-title" class="text-4xl font-bold text-indigo-600 dark:text-indigo-400">Finans Panelim</h1>
+                    <div class="flex items-center self-start sm:self-center">
+                        <button id="menu-toggle-btn" class="md:hidden text-2xl text-slate-600 dark:text-slate-300 mr-4"><i class="fa-solid fa-bars"></i></button>
+                        <h1 id="page-title" class="text-4xl font-bold text-indigo-600 dark:text-indigo-400">Finans Panelim</h1>
+                    </div>
                     <div class="flex items-center gap-2 flex-wrap justify-center">
                         <div class="relative">
                             <input type="text" id="search-input" placeholder="İşlemlerde Ara..." class="pl-10 pr-4 py-2 w-40 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">

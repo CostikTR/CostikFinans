@@ -84,6 +84,9 @@ const quickActionMenu = document.getElementById('quick-action-menu');
 const quickAddIncomeBtn = document.getElementById('quick-add-income');
 const quickAddExpenseBtn = document.getElementById('quick-add-expense');
 const pageTitle = document.getElementById('page-title');
+const menuToggleBtn = document.getElementById('menu-toggle-btn');
+const sidebar = document.getElementById('sidebar');
+const sidebarOverlay = document.getElementById('sidebar-overlay');
 const aiCategorizeBtn = document.getElementById('ai-categorize-btn');
 const aiBudgetSuggestionBtn = document.getElementById('ai-budget-suggestion-btn');
 const aiBudgetSuggestionModal = document.getElementById('ai-budget-suggestion-modal');
@@ -203,21 +206,44 @@ function navigateTo(pageId) {
     }
 }
 
+// --- MOBİL KENAR ÇUBUĞU (SIDEBAR) YÖNETİMİ ---
+const toggleSidebar = () => {
+    if (sidebar && sidebarOverlay) {
+        sidebar.classList.toggle('-translate-x-full');
+        sidebarOverlay.classList.toggle('sidebar-overlay-hidden');
+    }
+};
+
+if (menuToggleBtn && sidebar && sidebarOverlay) {
+    menuToggleBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleSidebar();
+    });
+
+    sidebarOverlay.addEventListener('click', toggleSidebar);
+}
+
 navLinks.forEach(link => {
     link.addEventListener('click', (e) => {
         e.preventDefault();
         const pageId = e.currentTarget.dataset.page;
         navigateTo(pageId);
+        if (window.innerWidth < 768 && sidebar && !sidebar.classList.contains('-translate-x-full')) {
+            toggleSidebar();
+        }
     });
 });
 
 // --- YARDIMCI FONKSİYONLAR ---
 function showNotification(message, type = 'error') {
+    // Önceki renk sınıflarını temizleyerek başla
+    notificationBar.classList.remove('bg-green-500', 'bg-sky-500', 'bg-red-500');
+
     notificationMessage.textContent = message;
-    notificationBar.className = 'notification-bar show fixed top-0 left-0 right-0 p-4 text-center text-white z-[100]';
     if (type === 'success') notificationBar.classList.add('bg-green-500');
     else if (type === 'info') notificationBar.classList.add('bg-sky-500');
     else notificationBar.classList.add('bg-red-500');
+    notificationBar.classList.add('show');
     setTimeout(() => {
         notificationBar.classList.remove('show');
     }, 3000);
