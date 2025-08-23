@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, collection, addDoc, query, onSnapshot, doc, deleteDoc, updateDoc, serverTimestamp, orderBy, writeBatch, getDoc, setDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, collection, addDoc, query, onSnapshot, doc, deleteDoc, updateDoc, serverTimestamp, orderBy, writeBatch, getDoc, setDoc, getDocs, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // ÖNEMLİ: Bu bilgileri canlıya almadan önce Vercel Environment Variables'a taşıyın.
 const firebaseConfig = {
@@ -31,6 +31,7 @@ const logoutButton = document.getElementById('logout-button');
 const authError = document.getElementById('auth-error');
 const loginTabButton = document.getElementById('login-tab-button');
 const registerTabButton = document.getElementById('register-tab-button');
+const forgotPasswordLink = document.getElementById('forgot-password-link');
 const deleteModal = document.getElementById('delete-modal');
 const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
 const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
@@ -117,12 +118,48 @@ const cardDebtChartContainer = document.getElementById('card-debt-chart-containe
 const cardThemeSelector = document.getElementById('card-theme-selector');
 const showHiddenCardsBtn = document.getElementById('show-hidden-cards-btn');
 
+// Hedefler Sayfası Elementleri
+const hedeflerPage = document.getElementById('hedefler-page');
+const goalsList = document.getElementById('goals-list');
+const addNewGoalBtn = document.getElementById('add-new-goal-btn');
+const goalModal = document.getElementById('goal-modal');
+const goalModalTitle = document.getElementById('goal-modal-title');
+const goalForm = document.getElementById('goal-form');
+const cancelGoalBtn = document.getElementById('cancel-goal-btn');
+const addFundsModal = document.getElementById('add-funds-modal');
+const addFundsForm = document.getElementById('add-funds-form');
+const cancelAddFundsBtn = document.getElementById('cancel-add-funds-btn');
+const addFundsModalTitle = document.getElementById('add-funds-modal-title');
+
+// Birikimler Sayfası Elementleri
+const savingsTotalAmountEl = document.getElementById('savings-total-amount');
+const savingsGoalCountEl = document.getElementById('savings-goal-count');
+const savingsThisMonthEl = document.getElementById('savings-this-month');
+const savingsTrendCtx = document.getElementById('savingsTrendChart')?.getContext('2d');
+const savingsDistributionCtx = document.getElementById('savingsDistributionChart')?.getContext('2d');
+const recentSavingsList = document.getElementById('recent-savings-list');
+let savingsTrendChart, savingsDistributionChart;
+
+// Yatırımlar Sayfası Elementleri
+const addNewInvestmentBtn = document.getElementById('add-new-investment-btn');
+const investmentModal = document.getElementById('investment-modal');
+const investmentModalTitle = document.getElementById('investment-modal-title');
+const investmentForm = document.getElementById('investment-form');
+const cancelInvestmentBtn = document.getElementById('cancel-investment-btn');
+const investmentList = document.getElementById('investment-list');
+const refreshPricesBtn = document.getElementById('refresh-prices-btn');
+const portfolioAllocationCtx = document.getElementById('portfolioAllocationChart')?.getContext('2d');
+let portfolioAllocationChart;
+
 // --- UYGULAMA DURUMU (STATE) ---
 let currentUserId = null;
 let transactionsUnsubscribe = null;
 let categoriesUnsubscribe = null;
 let notesUnsubscribe = null;
 let budgetsUnsubscribe = null;
+let goalsUnsubscribe = null;
+let savingsHistoryUnsubscribe = null;
+let investmentsUnsubscribe = null;
 let creditCardsUnsubscribe = null;
 let manualDebtsUnsubscribe = null;
 let cardDebtsUnsubscribe = null;
@@ -134,6 +171,9 @@ let allBudgets = {};
 let allCreditCards = [];
 let allManualDebts = [];
 let currentCardDebts = [];
+let goals = [];
+let savingsHistory = [];
+let allInvestments = [];
 let expenseChart = null;
 let cardDebtChart = null; 
 let parsedCsvData = [];
@@ -145,7 +185,10 @@ let undoTimeoutId = null;
 // --- SABİTLER ---
 const defaultIncomeCategories = ['Maaş', 'Ek Gelir', 'Diğer Gelir'];
 const defaultFixedExpenseCategories = ['Kira', 'Fatura', 'Kredi', 'Abonelik'];
-const defaultIrregularExpenseCategories = ['Market', 'Ulaşım', 'Eğlence', 'Sağlık', 'Diğer Gider'];
+const defaultIrregularExpenseCategories = ['Market', 'Ulaşım', 'Eğlece', 'Sağlık', 'Hedef Birikimi', 'Diğer Gider'];
+
+// --- API Ayarları ---
+const FMP_API_KEY = 'YK9Pd7ZPjrXZMHQNxSYmG0KNLIZYEtpQ';
 
 // --- GEMINI API FONKSİYONU ---
 async function callGemini(prompt) {
@@ -203,6 +246,13 @@ function navigateTo(pageId) {
     if (pageId === 'raporlar-page') {
         // Bu fonksiyonun bir önceki adımda eklenmiş olması gerekir.
         initializeAndRenderReports();
+    }
+    // Eğer Hedefler & Birikimler sayfasına geçildiyse, analizleri render et
+    if (pageId === 'hedefler-page') {
+        initializeAndRenderSavingsPage();
+    }
+    if (pageId === 'yatirimlar-page') {
+        initializeAndRenderInvestmentsPage();
     }
 }
 
@@ -290,7 +340,6 @@ onAuthStateChanged(auth, async (user) => {
         navigateTo('finans-paneli-page');
         initializeQuillEditor();
         await loadAllData();
-        initializeDashboardLayout();
         toggleLoading(false);
 
     } else {
@@ -302,6 +351,9 @@ onAuthStateChanged(auth, async (user) => {
         if (categoriesUnsubscribe) categoriesUnsubscribe();
         if (notesUnsubscribe) notesUnsubscribe();
         if (budgetsUnsubscribe) budgetsUnsubscribe();
+        if (goalsUnsubscribe) goalsUnsubscribe();
+        if (savingsHistoryUnsubscribe) savingsHistoryUnsubscribe();
+        if (investmentsUnsubscribe) investmentsUnsubscribe();
         if (creditCardsUnsubscribe) creditCardsUnsubscribe();
         if (manualDebtsUnsubscribe) manualDebtsUnsubscribe();
         if (cardDebtsUnsubscribe) cardDebtsUnsubscribe();
@@ -317,7 +369,10 @@ async function loadAllData() {
         loadBudgets(),
         loadNotes(),
         loadCreditCards(),
-        loadManualDebts()
+        loadManualDebts(),
+        loadGoals(),
+        loadSavingsHistory(),
+        loadInvestments()
     ]);
     await loadTransactions();
 }
@@ -930,20 +985,22 @@ function updateSummary() {
     document.getElementById('balance').textContent = `${userSettings.accountBalance.toFixed(2)} ₺`;
 }
 function clearUI() {
-    [customCategoryList, incomeList, fixedExpenseList, irregularExpenseList, creditPaymentList, budgetList, creditCardList, manualDebtList].forEach(list => { if (list) list.innerHTML = ''; });
+    [customCategoryList, incomeList, fixedExpenseList, irregularExpenseList, creditPaymentList, budgetList, creditCardList, manualDebtList, goalsList, recentSavingsList, investmentList].forEach(list => { if (list) list.innerHTML = ''; });
     updateSummary();
     if (expenseChart) {
         expenseChart.destroy();
         chartContainer.innerHTML = '<canvas id="expenseChart"></canvas>';
     }
 }
-function openDeleteModal(id, type, subId = null) {
+function openDeleteModal(id, type, subId = null, customText = null) {
     itemToDelete = { id, type, subId };
     const title = document.getElementById('delete-modal-title');
     const text = document.getElementById('delete-modal-text');
     if (type === 'note') { title.textContent = 'Notu Sil'; text.textContent = 'Bu notu silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.'; } 
     else if (type === 'budget') { title.textContent = 'Bütçeyi Kaldır'; text.textContent = `Bu kategori için belirlenen bütçeyi kaldırmak istediğinizden emin misiniz? (İşlemleriniz silinmeyecektir.)`; } 
     else if (type === 'creditCard') { title.textContent = 'Kredi Kartını Sil'; text.textContent = 'Bu kartı ve ilişkili tüm harcamaları silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.'; }
+    else if (type === 'goal') { title.textContent = 'Hedefi Sil'; text.textContent = customText || 'Bu hedefi silmek istediğinizden emin misiniz?'; }
+    else if (type === 'investment') { title.textContent = 'Yatırımı Sil'; text.textContent = 'Bu yatırımı portföyünüzden silmek istediğinizden emin misiniz?'; }
     else if (type === 'cardDebt') { title.textContent = 'Kart Harcamasını Sil'; text.textContent = 'Bu harcamayı silmek istediğinizden emin misiniz?'; }
     else if (type === 'manualDebt') { title.textContent = 'Borcu Sil'; text.textContent = 'Bu borcu silmek istediğinizden emin misiniz?'; }
     else { title.textContent = 'İşlemi Sil'; text.textContent = 'Bu işlemi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.'; }
@@ -957,6 +1014,30 @@ cancelDeleteBtn.addEventListener('click', closeDeleteModal);
 
 confirmDeleteBtn.addEventListener('click', async () => {
     if (!currentUserId || !itemToDelete.id) return;
+
+    if (itemToDelete.type === 'goal') {
+        try {
+            const goalToDelete = goals.find(g => g.id === itemToDelete.id);
+            if (goalToDelete && goalToDelete.currentAmount > 0) {
+                const newBalance = userSettings.accountBalance + goalToDelete.currentAmount;
+                const batch = writeBatch(db);
+                batch.update(doc(db, `artifacts/${appId}/users/${currentUserId}/settings/main`), { accountBalance: newBalance });
+                batch.delete(doc(db, `artifacts/${appId}/users/${currentUserId}/goals/${itemToDelete.id}`));
+                await batch.commit();
+                showNotification('Hedef silindi ve bakiye iade edildi.', 'success');
+            } else {
+                await deleteDoc(doc(db, `artifacts/${appId}/users/${currentUserId}/goals/${itemToDelete.id}`));
+                showNotification('Hedef silindi.', 'success');
+            }
+            await loadAllData();
+        } catch (error) {
+            console.error("Hedef silme hatası: ", error);
+            showNotification('Hedef silinirken bir hata oluştu.');
+        } finally {
+            closeDeleteModal();
+        }
+        return;
+    }
     
     let collectionName;
     let docId = itemToDelete.id;
@@ -967,6 +1048,7 @@ confirmDeleteBtn.addEventListener('click', async () => {
         case 'transaction': collectionName = 'transactions'; break;
         case 'budget': collectionName = 'budgets'; break;
         case 'creditCard': collectionName = 'creditCards'; break;
+        case 'investment': collectionName = 'investments'; break;
         case 'manualDebt': collectionName = 'manualDebts'; break;
         case 'cardDebt': 
             docPath = `artifacts/${appId}/users/${currentUserId}/creditCards/${itemToDelete.id}/debts/${itemToDelete.subId}`;
@@ -1228,7 +1310,7 @@ function openBudgetModal(category, mode = 'edit') {
         selectContainer.classList.remove('hidden');
         labelContainer.classList.add('hidden');
         const allExpenseCategories = [...defaultFixedExpenseCategories, ...defaultIrregularExpenseCategories, ...customCategories.map(c => c.name)];
-        const unbudgetedCategories = allExpenseCategories.filter(c => !allBudgets[c]);
+        const unbudgetedCategories = allExpenseCategories.filter(c => !allBudgets[c] && c !== 'Hedef Birikimi');
         populateSelect(categorySelect, unbudgetedCategories);
         budgetForm.amount.value = '';
         hiddenCategoryInput.value = categorySelect.value;
@@ -1428,6 +1510,23 @@ const handleAuthSubmit = async (e, authFunction) => {
 registerForm.addEventListener('submit', (e) => handleAuthSubmit(e, createUserWithEmailAndPassword));
 loginForm.addEventListener('submit', (e) => handleAuthSubmit(e, signInWithEmailAndPassword));
 logoutButton.addEventListener('click', () => signOut(auth));
+
+forgotPasswordLink.addEventListener('click', async (e) => {
+    e.preventDefault();
+    const email = prompt("Lütfen şifresini sıfırlamak istediğiniz e-posta adresini girin:");
+    if (!email) {
+        return; // Kullanıcı prompt'u iptal etti.
+    }
+    toggleLoading(true);
+    try {
+        await sendPasswordResetEmail(auth, email);
+        showNotification("Şifre sıfırlama e-postası gönderildi. Lütfen gelen kutunuzu kontrol edin.", "success");
+    } catch (error) {
+        showNotification(getFriendlyAuthError(error.code), "error");
+    } finally {
+        toggleLoading(false);
+    }
+});
 
 // --- GEMINI DESTEKLİ ÖZELLİKLER ---
 aiCategorizeBtn.addEventListener('click', async () => {
@@ -2032,103 +2131,6 @@ function renderCardDebtChart(debts) {
     }
 }
 
-// --- Panel Düzeni Fonksiyonları ---
-function initializeDashboardLayout() {
-    const containers = [
-        document.getElementById('draggable-container-1'),
-        document.getElementById('draggable-container-2'),
-        document.getElementById('draggable-container-3')
-    ];
-
-    applyLayoutPreferences();
-
-    containers.forEach(container => {
-        if (container) {
-            new Sortable(container, {
-                group: 'dashboard-cards',
-                animation: 150,
-                handle: '.drag-handle',
-                ghostClass: 'sortable-ghost',
-                onEnd: saveLayoutPreferences
-            });
-        }
-    });
-
-    document.querySelectorAll('.toggle-card-visibility').forEach(button => {
-        button.addEventListener('click', (e) => {
-            const card = e.currentTarget.closest('.draggable-card');
-            if (card) {
-                card.classList.toggle('hidden');
-                saveLayoutPreferences();
-                updateToggleIcon(card);
-            }
-        });
-    });
-}
-
-function saveLayoutPreferences() {
-    const layout = {};
-    document.querySelectorAll('.draggable-card').forEach(card => {
-        const cardId = card.dataset.cardId;
-        const parentId = card.parentElement.id;
-        const isHidden = card.classList.contains('hidden');
-        
-        if (!layout[parentId]) {
-            layout[parentId] = [];
-        }
-        layout[parentId].push({ id: cardId, hidden: isHidden });
-    });
-    localStorage.setItem('dashboardLayout', JSON.stringify(layout));
-}
-
-function applyLayoutPreferences() {
-    const savedLayoutJSON = localStorage.getItem('dashboardLayout');
-    if (!savedLayoutJSON) return;
-
-    const savedLayout = JSON.parse(savedLayoutJSON);
-    const allCards = new Map();
-    document.querySelectorAll('.draggable-card').forEach(card => {
-        allCards.set(card.dataset.cardId, card);
-    });
-
-    Object.keys(savedLayout).forEach(containerId => {
-        const container = document.getElementById(containerId);
-        if (container) {
-            savedLayout[containerId].forEach(cardInfo => {
-                const cardElement = allCards.get(cardInfo.id);
-                if (cardElement) {
-                    container.appendChild(cardElement);
-                    cardElement.classList.toggle('hidden', cardInfo.hidden);
-                    updateToggleIcon(cardElement);
-                }
-            });
-        }
-    });
-}
-
-function updateToggleIcon(cardElement) {
-    const button = cardElement.querySelector('.toggle-card-visibility');
-    if (button) {
-        const icon = button.querySelector('i');
-        if (cardElement.classList.contains('hidden')) {
-            icon.classList.remove('fa-eye');
-            icon.classList.add('fa-eye-slash');
-        } else {
-            icon.classList.remove('fa-eye-slash');
-            icon.classList.add('fa-eye');
-        }
-    }
-}
-
-showHiddenCardsBtn.addEventListener('click', () => {
-    document.querySelectorAll('.draggable-card').forEach(card => {
-        card.classList.remove('hidden');
-        updateToggleIcon(card);
-    });
-    saveLayoutPreferences(); // Değişiklikleri kaydet
-    showNotification('Tüm gizli kartlar gösterildi.', 'info');
-});
-
 /**
  * Gelecek ayın tahmini gelir ve giderlerini hesaplayıp ilgili kartı günceller.
  * Bu fonksiyon, tekrar eden işlemleri ve gelecek ay vadesi olan taksitleri baz alır.
@@ -2178,6 +2180,536 @@ async function updateForecastCard() {
     forecastIncomeEl.textContent = formatCurrency(estimatedIncome);
     forecastExpenseEl.textContent = formatCurrency(estimatedExpense);
     forecastCashflowEl.textContent = formatCurrency(estimatedCashflow);
+}
+
+// --- HEDEFLER (GOALS) FONKSİYONLARI ---
+
+const loadGoals = () => {
+    return new Promise((resolve, reject) => {
+        if (!currentUserId) {
+            goals = [];
+            return resolve();
+        }
+        if (goalsUnsubscribe) goalsUnsubscribe();
+        const goalsQuery = query(collection(db, `artifacts/${appId}/users/${currentUserId}/goals`), orderBy("createdAt", "desc"));
+        goalsUnsubscribe = onSnapshot(goalsQuery, (querySnapshot) => {
+            goals = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            displayGoals();
+            resolve();
+        }, (error) => {
+            console.error("Hedefler yüklenemedi:", error);
+            showNotification("Hedefler yüklenirken bir hata oluştu.", "error");
+            reject(error);
+        });
+    });
+};
+
+const displayGoals = () => {
+    if (!goalsList) return;
+    goalsList.innerHTML = '';
+
+    if (goals.length === 0) {
+        goalsList.innerHTML = `<p class="text-slate-500 text-sm text-center col-span-full p-8">Henüz bir hedef oluşturmadınız. 'Yeni Hedef Ekle' butonuyla başlayın!</p>`;
+        return;
+    }
+
+    goals.forEach(goal => {
+        const percentage = goal.targetAmount > 0 ? (goal.currentAmount / goal.targetAmount) * 100 : 0;
+        const targetDate = goal.targetDate ? new Date(goal.targetDate + 'T00:00:00Z') : null;
+        const remainingDays = targetDate ? Math.ceil((targetDate - new Date()) / (1000 * 60 * 60 * 24)) : null;
+
+        const goalCard = document.createElement('div');
+        goalCard.className = 'bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg flex flex-col';
+        goalCard.innerHTML = `
+            <div class="flex justify-between items-start mb-2">
+                <div>
+                    <h3 class="text-lg font-bold text-slate-800 dark:text-slate-200">${goal.name}</h3>
+                    <p class="text-sm text-slate-500">Hedef: ${formatCurrency(goal.targetAmount)}</p>
+                </div>
+                <i class="${goal.icon || 'fa-solid fa-bullseye'} text-3xl text-indigo-400"></i>
+            </div>
+            <p class="text-sm font-semibold text-green-600 dark:text-green-400 mb-2">Mevcut Birikim: ${formatCurrency(goal.currentAmount)}</p>
+            <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-4 mb-1">
+                <div class="bg-green-500 h-4 rounded-full transition-all duration-500" style="width: ${Math.min(percentage, 100)}%"></div>
+            </div>
+            <div class="flex justify-between text-xs text-slate-500">
+                <span>%${percentage.toFixed(1)}</span>
+                ${remainingDays !== null ? `<span>Kalan: ${remainingDays > 0 ? `${remainingDays} gün` : 'Süre Doldu'}</span>` : ''}
+            </div>
+            <div class="mt-auto pt-4 border-t border-slate-200 dark:border-slate-700 flex gap-2">
+                <button data-goal-id="${goal.id}" data-goal-name="${goal.name}" class="add-funds-to-goal-btn flex-1 bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300 text-sm font-semibold py-2 rounded-lg hover:bg-green-200">Para Ekle</button>
+                <button data-goal-id="${goal.id}" class="edit-goal-btn flex-1 bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300 text-sm font-semibold py-2 rounded-lg hover:bg-slate-200">Düzenle</button>
+                <button data-goal-id="${goal.id}" class="delete-goal-btn bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300 px-3 rounded-lg hover:bg-red-200"><i class="fa-solid fa-trash"></i></button>
+            </div>
+        `;
+        goalsList.appendChild(goalCard);
+    });
+
+    goalsList.querySelectorAll('.add-funds-to-goal-btn').forEach(btn => btn.addEventListener('click', (e) => openAddFundsModal(e.currentTarget.dataset.goalId, e.currentTarget.dataset.goalName)));
+    goalsList.querySelectorAll('.edit-goal-btn').forEach(btn => btn.addEventListener('click', (e) => handleGoalEdit(e.currentTarget.dataset.goalId)));
+    goalsList.querySelectorAll('.delete-goal-btn').forEach(btn => btn.addEventListener('click', (e) => handleGoalDelete(e.currentTarget.dataset.goalId)));
+};
+
+const openGoalModal = (goal = null) => {
+    goalForm.reset();
+    if (goal) {
+        goalModalTitle.textContent = 'Hedefi Düzenle';
+        goalForm.goalId.value = goal.id;
+        goalForm.goalName.value = goal.name;
+        goalForm.targetAmount.value = goal.targetAmount;
+        goalForm.targetDate.value = goal.targetDate || '';
+        goalForm.goalIcon.value = goal.icon || '';
+    } else {
+        goalModalTitle.textContent = 'Yeni Hedef';
+    }
+    goalModal.classList.remove('hidden');
+};
+
+const closeGoalModal = () => goalModal.classList.add('hidden');
+
+const handleGoalFormSubmit = async (e) => {
+    e.preventDefault();
+    const goalId = e.target.goalId.value;
+    const goalData = {
+        name: e.target.goalName.value,
+        targetAmount: parseFloat(e.target.targetAmount.value),
+        targetDate: e.target.targetDate.value || null,
+        icon: e.target.goalIcon.value || 'fa-solid fa-bullseye',
+        userId: currentUserId,
+    };
+
+    try {
+        if (goalId) {
+            await updateDoc(doc(db, `artifacts/${appId}/users/${currentUserId}/goals`, goalId), goalData);
+            showNotification("Hedef başarıyla güncellendi.", "success");
+        } else {
+            goalData.currentAmount = 0;
+            goalData.createdAt = serverTimestamp();
+            await addDoc(collection(db, `artifacts/${appId}/users/${currentUserId}/goals`), goalData);
+            showNotification("Yeni hedef başarıyla oluşturuldu.", "success");
+        }
+        closeGoalModal();
+    } catch (error) {
+        showNotification("Hedef kaydedilirken bir hata oluştu.", "error");
+    }
+};
+
+const openAddFundsModal = (goalId, goalName) => {
+    addFundsForm.reset();
+    addFundsForm.goalId.value = goalId;
+    addFundsModalTitle.textContent = `"${goalName}" Hedefine Para Ekle`;
+    addFundsModal.classList.remove('hidden');
+};
+
+const closeAddFundsModal = () => addFundsModal.classList.add('hidden');
+
+const handleAddFundsFormSubmit = async (e) => {
+    e.preventDefault();
+    const goalId = e.target.goalId.value;
+    const amount = parseFloat(e.target.amount.value);
+    if (amount <= 0 || !amount) return showNotification("Lütfen geçerli bir tutar girin.", "error");
+    if (userSettings.accountBalance < amount) return showNotification("Yetersiz bakiye!", "error");
+
+    const goalRef = doc(db, `artifacts/${appId}/users/${currentUserId}/goals`, goalId);
+    const settingsRef = doc(db, `artifacts/${appId}/users/${currentUserId}/settings/main`);
+    const transactionRef = doc(collection(db, `artifacts/${appId}/users/${currentUserId}/transactions`));
+    const savingsHistoryRef = doc(collection(db, `artifacts/${appId}/users/${currentUserId}/savingsHistory`));
+
+    try {
+        await runTransaction(db, async (transaction) => {
+            const goalDoc = await transaction.get(goalRef);
+            if (!goalDoc.exists()) throw "Hedef bulunamadı!";
+            
+            // 1. Hedefin mevcut birikimini güncelle
+            const newCurrentAmount = goalDoc.data().currentAmount + amount;
+            transaction.update(goalRef, { currentAmount: newCurrentAmount });
+
+            // 2. Ana bakiyeyi düşür
+            const newAccountBalance = userSettings.accountBalance - amount;
+            transaction.update(settingsRef, { accountBalance: newAccountBalance });
+
+            // 3. Bu transfer için bir gider işlemi oluştur
+            const newTransactionData = {
+                description: `"${goalDoc.data().name}" hedefine aktarıldı`,
+                amount: amount,
+                category: 'Hedef Birikimi',
+                type: 'expense',
+                isPaid: true,
+                createdAt: serverTimestamp()
+            };
+            transaction.set(transactionRef, newTransactionData);
+
+            // 4. Birikim hareketini kaydet
+            const savingsHistoryData = {
+                amount: amount,
+                goalId: goalId,
+                goalName: goalDoc.data().name,
+                type: 'deposit',
+                createdAt: serverTimestamp()
+            };
+            transaction.set(savingsHistoryRef, savingsHistoryData);
+
+            // Değişikliği anında yansıtmak için lokal state'i güncelle
+            userSettings.accountBalance = newAccountBalance;
+        });
+        showNotification(`${formatCurrency(amount)} hedefe eklendi ve gider olarak kaydedildi.`, "success");
+        closeAddFundsModal();
+        updateBalanceDisplay();
+    } catch (error) {
+        console.error("Para eklenirken bir hata oluştu:", error);
+        showNotification("Para eklenirken bir hata oluştu.", "error");
+    }
+};
+
+const handleGoalEdit = (goalId) => openGoalModal(goals.find(g => g.id === goalId));
+
+const handleGoalDelete = (goalId) => {
+    const goal = goals.find(g => g.id === goalId);
+    if (goal) {
+        const confirmationText = `"${goal.name}" hedefini silmek istediğinizden emin misiniz? Bu hedefe biriktirilen ${formatCurrency(goal.currentAmount)} tutarındaki para ana bakiyenize geri eklenecektir. Bu işlem geri alınamaz.`;
+        openDeleteModal(goalId, 'goal', null, confirmationText);
+    }
+};
+
+// --- BİRİKİMLER SAYFASI FONKSİYONLARI ---
+
+const loadSavingsHistory = () => {
+    return new Promise((resolve, reject) => {
+        if (!currentUserId) {
+            savingsHistory = [];
+            return resolve();
+        }
+        if (savingsHistoryUnsubscribe) savingsHistoryUnsubscribe();
+        const historyQuery = query(collection(db, `artifacts/${appId}/users/${currentUserId}/savingsHistory`), orderBy("createdAt", "desc"));
+        savingsHistoryUnsubscribe = onSnapshot(historyQuery, (snapshot) => {
+            savingsHistory = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            resolve();
+        }, (error) => {
+            console.error("Birikim geçmişi yüklenemedi:", error);
+            reject(error);
+        });
+    });
+};
+
+function initializeAndRenderSavingsPage() {
+    if (!savingsTotalAmountEl) return;
+
+    // 1. Özet Kartlarını Doldur
+    const totalSavings = goals.reduce((sum, goal) => sum + goal.currentAmount, 0);
+    savingsTotalAmountEl.textContent = formatCurrency(totalSavings);
+    savingsGoalCountEl.textContent = goals.length;
+
+    const thisMonth = new Date().getMonth();
+    const thisYear = new Date().getFullYear();
+    const thisMonthSavings = savingsHistory
+        .filter(h => h.createdAt && h.createdAt.toDate().getMonth() === thisMonth && h.createdAt.toDate().getFullYear() === thisYear)
+        .reduce((sum, h) => sum + h.amount, 0);
+    savingsThisMonthEl.textContent = formatCurrency(thisMonthSavings);
+
+    // 2. Grafikleri Çiz
+    renderSavingsTrendChart();
+    renderSavingsDistributionChart();
+
+    // 3. Son Hareketler Listesini Doldur
+    recentSavingsList.innerHTML = '';
+    if (savingsHistory.length === 0) {
+        recentSavingsList.innerHTML = '<p class="text-slate-500 text-sm text-center p-4">Henüz birikim hareketi yok.</p>';
+        return;
+    }
+    savingsHistory.slice(0, 5).forEach(item => {
+        const itemEl = document.createElement('div');
+        itemEl.className = 'flex justify-between items-center p-3 rounded-lg bg-slate-50 dark:bg-slate-700/50';
+        const itemDate = item.createdAt ? item.createdAt.toDate().toLocaleDateString('tr-TR') : '...';
+        itemEl.innerHTML = `
+            <div class="flex items-center gap-4">
+                <i class="fa-solid fa-circle-plus text-xl text-green-500"></i>
+                <div>
+                    <p class="font-semibold">"${item.goalName}" hedefine eklendi</p>
+                    <p class="text-sm text-slate-500">${itemDate}</p>
+                </div>
+            </div>
+            <p class="font-bold text-green-500">+${formatCurrency(item.amount)}</p>
+        `;
+        recentSavingsList.appendChild(itemEl);
+    });
+}
+
+function renderSavingsTrendChart() {
+    if (savingsTrendChart) savingsTrendChart.destroy();
+    
+    const monthlyData = savingsHistory.reduce((acc, t) => {
+        const date = t.createdAt?.toDate();
+        if (!date) return acc;
+        const month = date.toISOString().slice(0, 7);
+        if (!acc[month]) acc[month] = 0;
+        acc[month] += t.amount;
+        return acc;
+    }, {});
+
+    const sortedMonths = Object.keys(monthlyData).sort();
+    const labels = sortedMonths.map(month => new Date(month + '-02').toLocaleString('tr-TR', { month: 'short', year: 'numeric' }));
+    const data = sortedMonths.map(month => monthlyData[month]);
+
+    savingsTrendChart = new Chart(savingsTrendCtx, {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Aylık Birikim', data,
+                backgroundColor: 'rgba(79, 70, 229, 0.8)',
+                borderColor: 'rgba(79, 70, 229, 1)',
+                borderWidth: 1,
+                borderRadius: 5
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { callback: (value) => formatCurrency(value) } } }, plugins: { legend: { display: false } } }
+    });
+}
+
+function renderSavingsDistributionChart() {
+    if (savingsDistributionChart) savingsDistributionChart.destroy();
+
+    const labels = goals.map(g => g.name);
+    const data = goals.map(g => g.currentAmount);
+
+    savingsDistributionChart = new Chart(savingsDistributionCtx, {
+        type: 'doughnut',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Hedef Dağılımı', data,
+                backgroundColor: ['#6366f1', '#ec4899', '#22c55e', '#f97316', '#3b82f6', '#a855f7', '#14b8a6'],
+                hoverOffset: 4
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+    });
+}
+
+// --- YATIRIMLAR SAYFASI FONKSİYONLARI ---
+
+const loadInvestments = () => {
+    return new Promise((resolve, reject) => {
+        if (!currentUserId) {
+            allInvestments = [];
+            return resolve();
+        }
+        if (investmentsUnsubscribe) investmentsUnsubscribe();
+        const q = query(collection(db, `artifacts/${appId}/users/${currentUserId}/investments`), orderBy("purchaseDate", "desc"));
+        investmentsUnsubscribe = onSnapshot(q, (snapshot) => {
+            allInvestments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            // Yatırımlar yüklendikten sonra sayfayı render et (eğer o sayfadaysak)
+            if (document.getElementById('yatirimlar-page') && !document.getElementById('yatirimlar-page').classList.contains('hidden')) {
+                initializeAndRenderInvestmentsPage();
+            }
+            resolve();
+        }, (error) => {
+            console.error("Yatırımlar yüklenemedi:", error);
+            reject(error);
+        });
+    });
+};
+
+function initializeAndRenderInvestmentsPage() {
+    if (!investmentList) return;
+    
+    renderPortfolioAllocationChart();
+    
+    let totalPortfolioValue = 0;
+    let totalCost = 0;
+    
+    investmentList.innerHTML = '';
+    
+    if (allInvestments.length === 0) {
+        investmentList.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-slate-500">Henüz yatırım eklemediniz.</td></tr>`;
+        document.getElementById('portfolio-total-value').textContent = formatCurrency(0);
+        const totalPLEl = document.getElementById('portfolio-total-pl');
+        if (totalPLEl.firstChild) totalPLEl.firstChild.nodeValue = formatCurrency(0) + ' ';
+        document.getElementById('portfolio-total-pl-percent').textContent = '';
+    } else {
+        // First, calculate the total portfolio value to determine asset weights
+        allInvestments.forEach(inv => {
+            const currentValue = inv.quantity * inv.currentPrice;
+            totalPortfolioValue += currentValue;
+            totalCost += inv.quantity * inv.purchasePrice;
+        });
+        
+        // Now, render each row with the calculated weight
+        allInvestments.forEach(inv => {
+            const cost = inv.quantity * inv.purchasePrice;
+            const currentValue = inv.quantity * inv.currentPrice;
+            const profitLoss = currentValue - cost;
+            const profitLossPercent = cost > 0 ? (profitLoss / cost) * 100 : 0;
+            const weight = totalPortfolioValue > 0 ? (currentValue / totalPortfolioValue) * 100 : 0;
+            const plClass = profitLoss >= 0 ? 'text-green-500' : 'text-red-500';
+            
+            const row = document.createElement('tr');
+            row.className = 'border-b dark:border-slate-700';
+            row.innerHTML = `
+                <td class="px-6 py-4 font-medium text-slate-900 dark:text-white">${inv.assetName}<span class="block text-xs text-slate-500">${inv.assetType}</span></td>
+                <td class="px-6 py-4">${formatCurrency(cost)}</td>
+                <td class="px-6 py-4">${formatCurrency(currentValue)}</td>
+                <td class="px-6 py-4">${weight.toFixed(2)}%</td>
+                <td class="px-6 py-4 font-semibold ${plClass}">
+                    ${formatCurrency(profitLoss)}
+                    <span class="block text-xs">(${profitLossPercent.toFixed(2)}%)</span>
+                </td>
+                <td class="px-6 py-4 text-right">
+                    <button data-id="${inv.id}" class="edit-investment-btn text-slate-400 hover:text-indigo-500 mr-2"><i class="fa-solid fa-pencil"></i></button>
+                    <button data-id="${inv.id}" class="delete-investment-btn text-slate-400 hover:text-red-500"><i class="fa-solid fa-trash-can"></i></button>
+                </td>
+            `;
+            investmentList.appendChild(row);
+        });
+        
+        // Update summary cards
+        document.getElementById('portfolio-total-value').textContent = formatCurrency(totalPortfolioValue);
+        const totalPL = totalPortfolioValue - totalCost;
+        const totalPLPercent = totalCost > 0 ? (totalPL / totalCost) * 100 : 0;
+        const totalPLEl = document.getElementById('portfolio-total-pl');
+        const totalPLPercentEl = document.getElementById('portfolio-total-pl-percent');
+
+        if (totalPLEl.firstChild) {
+            totalPLEl.firstChild.nodeValue = formatCurrency(totalPL) + ' ';
+        }
+        totalPLPercentEl.textContent = `(${totalPLPercent.toFixed(2)}%)`;
+
+        // Renk sınıflarını doğru elemente uygula
+        totalPLEl.classList.remove('text-green-500', 'text-red-500');
+        totalPLEl.classList.add(totalPL >= 0 ? 'text-green-500' : 'text-red-500');
+    }
+    
+    investmentList.querySelectorAll('.edit-investment-btn').forEach(btn => btn.addEventListener('click', (e) => openInvestmentModal(e.currentTarget.dataset.id)));
+    investmentList.querySelectorAll('.delete-investment-btn').forEach(btn => btn.addEventListener('click', (e) => openDeleteModal(e.currentTarget.dataset.id, 'investment')));
+}
+
+function renderPortfolioAllocationChart() {
+    if (portfolioAllocationChart) portfolioAllocationChart.destroy();
+    if (!portfolioAllocationCtx) return;
+
+    const allocation = allInvestments.reduce((acc, inv) => {
+        const type = inv.assetType;
+        const value = inv.quantity * inv.currentPrice;
+        if (!acc[type]) acc[type] = 0;
+        acc[type] += value;
+        return acc;
+    }, {});
+
+    const labels = Object.keys(allocation);
+    const data = Object.values(allocation);
+
+    portfolioAllocationChart = new Chart(portfolioAllocationCtx, {
+        type: 'doughnut',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Portföy Dağılımı', data,
+                backgroundColor: ['#3b82f6', '#10b981', '#f97316', '#8b5cf6', '#f59e0b', '#ec4899'],
+                borderColor: portfolioAllocationCtx.canvas.closest('.dark') ? '#1e293b' : '#ffffff',
+                borderWidth: 2,
+                hoverOffset: 4
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: portfolioAllocationCtx.canvas.closest('.dark') ? '#cbd5e1' : '#475569' } } } }
+    });
+}
+
+function openInvestmentModal(investmentId = null) {
+    investmentForm.reset();
+    if (investmentId) {
+        const investment = allInvestments.find(inv => inv.id === investmentId);
+        if (!investment) return;
+        investmentModalTitle.textContent = 'Yatırımı Düzenle';
+        investmentForm.investmentId.value = investment.id;
+        investmentForm.assetName.value = investment.assetName;
+        investmentForm.assetType.value = investment.assetType;
+        investmentForm.quantity.value = investment.quantity;
+        investmentForm.purchasePrice.value = investment.purchasePrice;
+        investmentForm.currentPrice.value = investment.currentPrice;
+        investmentForm.purchaseDate.value = investment.purchaseDate;
+        investmentForm.assetSymbol.value = investment.assetSymbol;
+    } else {
+        investmentModalTitle.textContent = 'Yeni Yatırım Ekle';
+    }
+    investmentModal.classList.remove('hidden');
+}
+
+function closeInvestmentModal() {
+    investmentModal.classList.add('hidden');
+}
+
+async function handleInvestmentFormSubmit(e) {
+    e.preventDefault();
+    const investmentId = e.target.investmentId.value;
+    const data = {
+        assetName: e.target.assetName.value,
+        assetType: e.target.assetType.value,
+        quantity: parseFloat(e.target.quantity.value),
+        purchasePrice: parseFloat(e.target.purchasePrice.value),
+        currentPrice: parseFloat(e.target.currentPrice.value),
+        purchaseDate: e.target.purchaseDate.value,
+        assetSymbol: e.target.assetSymbol.value.toUpperCase(),
+    };
+
+    try {
+        if (investmentId) {
+            await updateDoc(doc(db, `artifacts/${appId}/users/${currentUserId}/investments`, investmentId), data);
+        } else {
+            await addDoc(collection(db, `artifacts/${appId}/users/${currentUserId}/investments`), data);
+        }
+        closeInvestmentModal();
+    } catch (error) {
+        console.error("Yatırım kaydedilemedi:", error);
+        showNotification("Yatırım kaydedilirken bir hata oluştu.", "error");
+    }
+}
+
+async function fetchLatestPrices() {
+    if (!FMP_API_KEY || FMP_API_KEY === 'BURAYA_FMP_API_ANAHTARINIZI_YAPIŞTIRIN') {
+        return showNotification('Lütfen script.js dosyasına API anahtarınızı girin.', 'error');
+    }
+
+    toggleLoading(true);
+    refreshPricesBtn.disabled = true;
+
+    const updatePromises = allInvestments.map(async (inv) => {
+        if (!inv.assetSymbol) return;
+
+        let url;
+        if (inv.assetType === 'crypto' || inv.assetType === 'forex') {
+            url = `https://financialmodelingprep.com/api/v3/quote-short/${inv.assetSymbol}?apikey=${FMP_API_KEY}`;
+        } else if (inv.assetType === 'stock' || inv.assetType === 'fund') {
+            url = `https://financialmodelingprep.com/api/v3/quote-short/${inv.assetSymbol}?apikey=${FMP_API_KEY}`;
+        } else {
+            return; // Diğer tipleri atla
+        }
+
+        try {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(`API error for ${inv.assetSymbol}`);
+            const data = await response.json();
+
+            if (data && data.length > 0 && data[0].price) {
+                const newPrice = data[0].price;
+                const investmentRef = doc(db, `artifacts/${appId}/users/${currentUserId}/investments`, inv.id);
+                return updateDoc(investmentRef, { currentPrice: newPrice });
+            } else {
+                console.warn(`Fiyat bilgisi bulunamadı: ${inv.assetSymbol}`);
+            }
+        } catch (error) {
+            console.error(`Fiyat alınırken hata oluştu: ${inv.assetSymbol}`, error);
+        }
+    });
+
+    try {
+        await Promise.all(updatePromises.filter(p => p));
+        showNotification('Fiyatlar başarıyla güncellendi.', 'success');
+    } catch (error) {
+        showNotification('Fiyatlar güncellenirken bir hata oluştu.', 'error');
+    } finally {
+        toggleLoading(false);
+        refreshPricesBtn.disabled = false;
+    }
 }
 
 // =================================================================================
@@ -2362,3 +2894,16 @@ exportPdfBtn.addEventListener('click', () => {
     doc.autoTable({ html: '#report-table-body', startY: 50, head: [['Tarih', 'Tip', 'Açıklama', 'Kategori', 'Tutar']], theme: 'grid' });
     doc.save(`FinansPro-Rapor-${startDate}_${endDate}.pdf`);
 });
+
+// Hedefler Event Listeners
+addNewGoalBtn.addEventListener('click', () => openGoalModal());
+cancelGoalBtn.addEventListener('click', closeGoalModal);
+goalForm.addEventListener('submit', handleGoalFormSubmit);
+cancelAddFundsBtn.addEventListener('click', closeAddFundsModal);
+addFundsForm.addEventListener('submit', handleAddFundsFormSubmit);
+
+// Yatırımlar Event Listeners
+addNewInvestmentBtn.addEventListener('click', () => openInvestmentModal());
+cancelInvestmentBtn.addEventListener('click', closeInvestmentModal);
+investmentForm.addEventListener('submit', handleInvestmentFormSubmit);
+refreshPricesBtn.addEventListener('click', fetchLatestPrices);
