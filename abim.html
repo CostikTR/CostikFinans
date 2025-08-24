@@ -1,0 +1,1305 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finans Panelim</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" xintegrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; color: #1f2937; }
+        .card { background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 0.75rem; padding: 1.5rem; box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.05), 0 1px 2px -1px rgb(0 0 0 / 0.05); }
+        .btn { padding: 0.6rem 1.2rem; border-radius: 0.5rem; font-weight: 600; transition: all 0.2s ease-in-out; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem; }
+        .btn:disabled { cursor: not-allowed; background-color: #d1d5db; }
+        .btn-primary { background-color: #3b82f6; color: white; }
+        .btn-primary:hover:not(:disabled) { background-color: #2563eb; }
+        .btn-danger { background-color: #ef4444; color: white; }
+        .btn-danger:hover:not(:disabled) { background-color: #dc2626; }
+        .btn-secondary { background-color: #e5e7eb; color: #374151; }
+        .btn-secondary:hover:not(:disabled) { background-color: #d1d5db; }
+        .input-field { background-color: #f9fafb; border: 1px solid #d1d5db; border-radius: 0.5rem; padding: 0.75rem; color: #1f2937; width: 100%; }
+        .input-field:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 2px #bfdbfe; }
+        .nav-link { display: flex; align-items: center; padding: 0.75rem 1rem; border-radius: 0.5rem; color: #4b5563; font-weight: 500; transition: all 0.2s; }
+        .nav-link:hover { background-color: #e5e7eb; color: #1f2937; }
+        .nav-link.active { background-color: #dbeafe; color: #2563eb; }
+        .page { display: none; }
+        .page.active { display: block; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+        .calendar-day { text-align: center; padding: 0.25rem; font-size: 0.875rem; border-radius: 50%; cursor: pointer; transition: all 0.2s; aspect-ratio: 1/1; display:flex; align-items:center; justify-content:center; }
+        .calendar-day.has-payment { background-color: #fecaca; font-weight: bold; color: #b91c1c; }
+        .calendar-day.all-paid { background-color: #dcfce7; font-weight: bold; color: #166534; }
+        .calendar-day.selected { background-color: #3b82f6; color: white; }
+        .calendar-day:not(.empty):hover { background-color: #dbeafe; }
+        .credit-card-visual { background: linear-gradient(45deg, #4f46e5, #7c3aed); color: white; border-radius: 1rem; padding: 1.5rem; aspect-ratio: 1.586; display: flex; flex-direction: column; justify-content: space-between; }
+        .accordion-content { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; }
+        .filter-btn { padding: 0.4rem 0.8rem; border-radius: 9999px; font-weight: 500; font-size: 0.875rem; border: 1px solid #d1d5db; }
+        .filter-btn.active { background-color: #3b82f6; color: white; border-color: #3b82f6; }
+        #toast-container { position: fixed; top: 1.5rem; right: 1.5rem; z-index: 100; display: flex; flex-direction: column; gap: 0.75rem; }
+        .toast { display: flex; align-items: center; padding: 1rem; border-radius: 0.5rem; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); color: white; opacity: 0; transform: translateX(100%); transition: all 0.3s ease-in-out; }
+        .toast.show { opacity: 1; transform: translateX(0); }
+        .toast-success { background-color: #22c55e; }
+        .toast-error { background-color: #ef4444; }
+    </style>
+</head>
+<body class="flex">
+
+    <div id="toast-container"></div>
+
+    <!-- Kenar Menüsü (Sidebar) -->
+    <aside class="w-64 bg-white p-4 border-r border-gray-200 h-screen sticky top-0">
+        <div class="text-2xl font-bold text-blue-600 mb-8">FinansAsistan</div>
+        <nav class="space-y-2">
+            <a href="#" class="nav-link active" data-page="dashboard"><i class="fas fa-tachometer-alt w-6 text-center"></i><span>Panel</span></a>
+            <a href="#" class="nav-link" data-page="payments"><i class="fas fa-wallet w-6 text-center"></i><span>Ödemeler</span></a>
+            <a href="#" class="nav-link" data-page="recurring"><i class="fas fa-redo-alt w-6 text-center"></i><span>Düzenli İşlemler</span></a>
+            <a href="#" class="nav-link" data-page="transactions"><i class="fas fa-exchange-alt w-6 text-center"></i><span>Tüm İşlemler</span></a>
+            <a href="#" class="nav-link" data-page="calendar"><i class="fas fa-calendar-alt w-6 text-center"></i><span>Takvim</span></a>
+            <a href="#" class="nav-link" data-page="cards"><i class="fas fa-credit-card w-6 text-center"></i><span>Kredi Kartları</span></a>
+            <a href="#" class="nav-link text-gray-400 cursor-not-allowed" data-page="settings"><i class="fas fa-cog w-6 text-center"></i><span>Ayarlar</span></a>
+        </nav>
+        <div class="mt-8 p-3 bg-gray-100 rounded-lg text-xs text-gray-600">
+            <p class="font-bold">Kullanıcı ID:</p>
+            <p id="userIdDisplay" class="break-all">Yükleniyor...</p>
+        </div>
+    </aside>
+
+    <!-- Ana İçerik -->
+    <main class="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
+        <!-- Sayfa: Panel (Dashboard) -->
+        <div id="dashboard" class="page active">
+            <header class="flex flex-wrap justify-between items-center mb-8 gap-4">
+                <div><h1 class="text-3xl font-bold text-gray-800">Panel</h1><p class="text-gray-500">Mali durumunuza genel bir bakış.</p></div>
+                <div class="flex items-center gap-2">
+                    <button class="btn btn-secondary" onclick="window.openModal('reconcileModal')"><i class="fas fa-sync-alt"></i> Nakit Eşitle</button>
+                    <button class="btn btn-primary" onclick="window.openModal('addTransactionModal')"><i class="fas fa-plus"></i> Yeni İşlem Ekle</button>
+                </div>
+            </header>
+            <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
+                <div class="card"><h2 class="text-md font-medium text-gray-500">Mevcut Nakit</h2><p id="summary-wallet" class="text-2xl font-bold text-blue-600 mt-2">0.00 ₺</p></div>
+                <div class="card"><h2 class="text-md font-medium text-gray-500">Toplam Kart Borcu</h2><p id="summary-card-debt" class="text-2xl font-bold text-purple-600 mt-2">0.00 ₺</p></div>
+                <div class="card"><h2 class="text-md font-medium text-gray-500">Planlanan Gider</h2><p id="summary-total-expense" class="text-2xl font-bold text-orange-500 mt-2">0.00 ₺</p></div>
+                <div class="card"><h2 class="text-md font-medium text-gray-500">Kalan Ödemeler</h2><p id="summary-remaining-expense" class="text-2xl font-bold text-red-600 mt-2">0.00 ₺</p></div>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-5 gap-8">
+                <div class="lg:col-span-3 card">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-bold">Son İşlemler</h3>
+                        <div id="recent-transactions-toggle" class="flex items-center gap-2">
+                            <button class="filter-btn active" data-filter="all">Tüm İşlemler</button>
+                            <button class="filter-btn" data-filter="significant">Önemli İşlemler</button>
+                        </div>
+                    </div>
+                    <div id="recent-transactions-list" class="space-y-3"></div>
+                </div>
+                <div class="lg:col-span-2 card"><h3 class="text-xl font-bold mb-4">Yaklaşan Ödemeler</h3><div id="upcoming-payments-list" class="space-y-3"></div></div>
+            </div>
+        </div>
+
+        <!-- Diğer Sayfalar -->
+        <div id="payments" class="page">
+             <h1 class="text-3xl font-bold text-gray-800 mb-8">Yapılacak Ödemeler</h1>
+             <div class="card">
+                 <div class="overflow-x-auto">
+                     <table class="w-full text-left">
+                         <thead class="border-b-2 border-gray-200"><tr><th class="p-3 text-sm font-semibold text-gray-500">Açıklama</th><th class="p-3 text-sm font-semibold text-gray-500">Son Ödeme Tarihi</th><th class="p-3 text-sm font-semibold text-gray-500">Tutar</th><th class="p-3 text-sm font-semibold text-gray-500">İşlem</th></tr></thead>
+                         <tbody id="payments-list"></tbody>
+                     </table>
+                 </div>
+             </div>
+        </div>
+        <div id="recurring" class="page">
+             <header class="flex flex-wrap justify-between items-center mb-8 gap-4">
+                 <div><h1 class="text-3xl font-bold text-gray-800">Düzenli İşlemler</h1><p class="text-gray-500">Tekrarlanan gelir ve giderlerinizi yönetin.</p></div>
+                 <button class="btn btn-primary" onclick="window.openModal('addRecurringModal')"><i class="fas fa-plus"></i> Yeni Ekle</button>
+            </header>
+             <div class="card">
+                 <div class="overflow-x-auto">
+                     <table class="w-full text-left">
+                         <thead class="border-b-2 border-gray-200"><tr><th class="p-3 text-sm font-semibold text-gray-500">Açıklama</th><th class="p-3 text-sm font-semibold text-gray-500">Tutar</th><th class="p-3 text-sm font-semibold text-gray-500">Periyot</th><th class="p-3 text-sm font-semibold text-gray-500">İşlemler</th></tr></thead>
+                         <tbody id="recurring-list"></tbody>
+                     </table>
+                 </div>
+             </div>
+        </div>
+        <div id="transactions" class="page">
+             <h1 class="text-3xl font-bold text-gray-800 mb-8">Tüm İşlemler (Arşiv)</h1>
+             <div class="card mb-6">
+                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
+                     <div>
+                         <label for="filter-search" class="block mb-1 text-sm font-medium text-gray-600">Açıklama Ara</label>
+                         <input type="text" id="filter-search" class="input-field" placeholder="Örn: Market, Kira...">
+                     </div>
+                     <div>
+                         <label for="filter-category" class="block mb-1 text-sm font-medium text-gray-600">Kategori</label>
+                         <select id="filter-category" class="input-field">
+                             <option value="all">Tümü</option>
+                             <option>Fatura</option><option>Market</option><option>Ulaşım</option><option>Kira</option><option>Eğlence</option><option>Maaş</option><option>Diğer</option>
+                         </select>
+                     </div>
+                     <div class="grid grid-cols-2 gap-2">
+                         <div>
+                             <label for="filter-date-start" class="block mb-1 text-sm font-medium text-gray-600">Başlangıç</label>
+                             <input type="date" id="filter-date-start" class="input-field">
+                         </div>
+                         <div>
+                             <label for="filter-date-end" class="block mb-1 text-sm font-medium text-gray-600">Bitiş</label>
+                             <input type="date" id="filter-date-end" class="input-field">
+                         </div>
+                     </div>
+                     <div class="grid grid-cols-2 gap-2">
+                         <div>
+                             <label for="filter-amount-min" class="block mb-1 text-sm font-medium text-gray-600">Min Tutar</label>
+                             <input type="number" id="filter-amount-min" class="input-field" placeholder="0">
+                         </div>
+                         <div>
+                             <label for="filter-amount-max" class="block mb-1 text-sm font-medium text-gray-600">Max Tutar</label>
+                             <input type="number" id="filter-amount-max" class="input-field" placeholder="10000">
+                         </div>
+                     </div>
+                     <div class="col-span-full md:col-span-2 lg:col-span-3 flex gap-2 justify-end mt-4">
+                         <button id="filter-apply-btn" class="btn btn-primary w-full sm:w-auto">Filtrele</button>
+                         <button id="filter-reset-btn" class="btn btn-secondary w-full sm:w-auto">Sıfırla</button>
+                     </div>
+                 </div>
+             </div>
+             <div id="report-summary" class="card hidden mb-6">
+                 <h3 class="text-xl font-bold text-gray-800 mb-4">Filtre Rapor Özeti</h3>
+                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                     <div>
+                         <h4 class="text-md font-medium text-gray-500">Toplam Gelir</h4>
+                         <p id="report-total-income" class="text-2xl font-bold text-green-600 mt-1">0.00 ₺</p>
+                     </div>
+                     <div>
+                         <h4 class="text-md font-medium text-gray-500">Toplam Gider</h4>
+                         <p id="report-total-expense" class="text-2xl font-bold text-red-600 mt-1">0.00 ₺</p>
+                     </div>
+                     <div>
+                         <h4 class="text-md font-medium text-gray-500">Net Nakit Akışı</h4>
+                         <p id="report-net-flow" class="text-2xl font-bold text-blue-600 mt-1">0.00 ₺</p>
+                     </div>
+                     <div>
+                         <h4 class="text-md font-medium text-gray-500">İşlem Sayısı</h4>
+                         <p id="report-transaction-count" class="text-2xl font-bold text-gray-700 mt-1">0</p>
+                     </div>
+                 </div>
+             </div>
+             <div id="transactions-accordion-container" class="space-y-3"></div>
+        </div>
+        <div id="cards" class="page">
+            <header class="flex flex-wrap justify-between items-center mb-8 gap-4">
+                <div><h1 class="text-3xl font-bold text-gray-800">Kredi Kartlarım</h1><p class="text-gray-500">Kredi kartlarınızı ve borç durumunuzu yönetin.</p></div>
+                <button class="btn btn-primary" onclick="window.openModal('addCardModal')"><i class="fas fa-plus"></i> Yeni Kart Ekle</button>
+            </header>
+            <div id="credit-card-list" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8"></div>
+        </div>
+        <div id="calendar" class="page">
+            <h1 class="text-3xl font-bold text-gray-800 mb-8">Takvim</h1>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div class="lg:col-span-1 card">
+                    <div class="flex justify-between items-center mb-4"><button id="prev-month" class="p-2 rounded-full hover:bg-gray-100"><i class="fas fa-chevron-left"></i></button><h3 id="month-year" class="text-xl font-bold"></h3><button id="next-month" class="p-2 rounded-full hover:bg-gray-100"><i class="fas fa-chevron-right"></i></button></div>
+                    <div class="grid grid-cols-7 gap-1 text-center text-sm text-gray-500 mb-2"><span>Pzt</span><span>Sal</span><span>Çar</span><span>Per</span><span>Cum</span><span>Cmt</span><span>Paz</span></div>
+                    <div id="calendar-grid" class="calendar-grid"></div>
+                    <div id="calendar-summary"></div>
+                </div>
+                <div class="lg:col-span-2 card"><h3 class="text-xl font-bold mb-4">Ajanda</h3><div id="agenda-list" class="space-y-3"></div></div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modallar -->
+    <div id="addTransactionModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+            <div class="flex justify-between items-center mb-4"><h2 class="text-xl font-bold" id="transactionModalTitle">Yeni İşlem</h2><button onclick="window.closeModal('addTransactionModal')" class="text-gray-400 hover:text-gray-800 text-2xl">&times;</button></div>
+            <form id="transaction-form" class="space-y-4">
+                <input type="hidden" id="editingTransactionId">
+                <div><label for="transactionType" class="block mb-2 text-sm font-medium text-gray-600">İşlem Türü</label><select id="transactionType" class="input-field"><option value="expense">Gider</option><option value="income">Gelir</option><option value="cardPayment">Kredi Kartı Ödemesi</option></select></div>
+                <div id="form-fields-container"></div>
+                <div class="flex justify-end pt-2"><button type="button" class="btn btn-secondary mr-2" onclick="window.closeModal('addTransactionModal')">İptal</button><button type="submit" class="btn btn-primary">Kaydet</button></div>
+            </form>
+        </div>
+    </div>
+    <div id="addRecurringModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+            <div class="flex justify-between items-center mb-4"><h2 class="text-xl font-bold" id="recurringModalTitle">Yeni Düzenli İşlem</h2><button onclick="window.closeModal('addRecurringModal')" class="text-gray-400 hover:text-gray-800 text-2xl">&times;</button></div>
+            <form id="recurring-form" class="space-y-4">
+                <input type="hidden" id="editingRecurringId">
+                <div><label for="recurringType" class="block mb-2 text-sm font-medium text-gray-600">İşlem Türü</label><select id="recurringType" class="input-field"><option value="expense">Gider</option><option value="income">Gelir</option></select></div>
+                <div><label for="recurringDescription" class="block mb-2 text-sm font-medium text-gray-600">Açıklama</label><input type="text" id="recurringDescription" class="input-field" placeholder="Örn: Kira Ödemesi" required></div>
+                <div><label for="recurringAmount" class="block mb-2 text-sm font-medium text-gray-600">Tutar</label><input type="number" id="recurringAmount" step="0.01" class="input-field" required></div>
+                <div id="recurring-category-container">
+                    <label for="recurringCategory" class="block mb-2 text-sm font-medium text-gray-600">Kategori</label>
+                    <select id="recurringCategory" class="input-field">
+                        <option>Fatura</option><option>Market</option><option>Ulaşım</option><option>Kira</option><option>Eğlence</option><option>Diğer</option>
+                    </select>
+                </div>
+                <div><label for="recurringFrequency" class="block mb-2 text-sm font-medium text-gray-600">Tekrarlama Sıklığı</label><select id="recurringFrequency" class="input-field"><option value="monthly">Her Ay</option><option value="quarterly">3 Ayda Bir</option><option value="semi-annually">6 Ayda Bir</option><option value="annually">Her Yıl</option></select></div>
+                <div><label for="recurringDay" class="block mb-2 text-sm font-medium text-gray-600">Ayın Günü (1-28)</label><input type="number" id="recurringDay" class="input-field" min="1" max="28" placeholder="1" required></div>
+                <div class="flex justify-end pt-2"><button type="button" class="btn btn-secondary mr-2" onclick="window.closeModal('addRecurringModal')">İptal</button><button type="submit" class="btn btn-primary">Kaydet</button></div>
+            </form>
+        </div>
+    </div>
+    <div id="reconcileModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+             <div class="flex justify-between items-center mb-4"><h2 class="text-xl font-bold">Nakit Bakiyeyi Eşitle</h2><button onclick="window.closeModal('reconcileModal')" class="text-gray-400 hover:text-gray-800 text-2xl">&times;</button></div>
+             <div class="p-4 bg-yellow-100 border-l-4 border-yellow-400 text-yellow-700 mb-4 rounded-md"><p class="font-bold">Önemli Uyarı</p><p>Doğru bir eşitleme için, bu aydaki maaş gibi büyük işlemlerinizi uygulamaya girdiğinizden emin olun.</p></div>
+             <form id="reconcile-form" class="space-y-4">
+                  <div><label for="actualBalance" class="block mb-2 text-sm font-medium text-gray-600">Gerçek Nakit Bakiyeniz (₺)</label><input type="number" id="actualBalance" step="0.01" class="input-field" placeholder="0.00" required></div>
+                  <div class="flex justify-end pt-2"><button type="button" class="btn btn-secondary mr-2" onclick="window.closeModal('reconcileModal')">İptal</button><button type="submit" class="btn btn-primary">Eşitle</button></div>
+             </form>
+        </div>
+    </div>
+    <div id="addCardModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+            <div class="flex justify-between items-center mb-4"><h2 class="text-xl font-bold">Yeni Kredi Kartı Ekle</h2><button onclick="window.closeModal('addCardModal')" class="text-gray-400 hover:text-gray-800 text-2xl">&times;</button></div>
+            <form id="add-card-form" class="space-y-4">
+                <div><label for="cardName" class="block mb-2 text-sm font-medium text-gray-600">Kart Adı</label><input type="text" id="cardName" class="input-field" placeholder="Örn: Bonus Card" required></div>
+                <div><label for="cardLimit" class="block mb-2 text-sm font-medium text-gray-600">Kart Limiti (₺)</label><input type="number" id="cardLimit" step="0.01" class="input-field" placeholder="10000" required></div>
+                <div><label for="cardStatementDay" class="block mb-2 text-sm font-medium text-gray-600">Hesap Kesim Günü (1-31)</label><input type="number" id="cardStatementDay" class="input-field" min="1" max="31" placeholder="22" required></div>
+                <div><label for="cardDueDay" class="block mb-2 text-sm font-medium text-gray-600">Son Ödeme Günü (1-31)</label><input type="number" id="cardDueDay" class="input-field" min="1" max="31" placeholder="30" required></div>
+                <div class="flex justify-end pt-2"><button type="button" class="btn btn-secondary mr-2" onclick="window.closeModal('addCardModal')">İptal</button><button type="submit" class="btn btn-primary">Ekle</button></div>
+            </form>
+        </div>
+    </div>
+    <div id="reconcileCardModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+             <div class="flex justify-between items-center mb-4"><h2 class="text-xl font-bold">Kart Borcunu Eşitle</h2><button onclick="window.closeModal('reconcileCardModal')" class="text-gray-400 hover:text-gray-800 text-2xl">&times;</button></div>
+             <form id="reconcile-card-form" class="space-y-4">
+                  <input type="hidden" id="reconcileCardId">
+                  <div><label for="actualCardDebt" class="block mb-2 text-sm font-medium text-gray-600">Bankanızdaki Güncel Toplam Borç (₺)</label><input type="number" id="actualCardDebt" step="0.01" class="input-field" placeholder="0.00" required></div>
+                  <div class="flex justify-end pt-2"><button type="button" class="btn btn-secondary mr-2" onclick="window.closeModal('reconcileCardModal')">İptal</button><button type="submit" class="btn btn-primary">Eşitle</button></div>
+             </form>
+        </div>
+    </div>
+    <div id="payCardBillModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+             <div class="flex justify-between items-center mb-4"><h2 class="text-xl font-bold" id="payCardBillTitle"></h2><button onclick="window.closeModal('payCardBillModal')" class="text-gray-400 hover:text-gray-800 text-2xl">&times;</button></div>
+             <div id="payCardBillInfo" class="space-y-4"></div>
+        </div>
+    </div>
+    <div id="confirmModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-sm p-6">
+            <h2 class="text-xl font-bold mb-4" id="confirmModalTitle">İşlemi Onayla</h2>
+            <p id="confirmModalText" class="text-gray-600 mb-6">Bu işlemi gerçekleştirmek istediğinizden emin misiniz?</p>
+            <div class="flex justify-end gap-3">
+                <button id="confirmModalCancel" class="btn btn-secondary">İptal</button>
+                <button id="confirmModalConfirm" class="btn btn-danger">Sil</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, getDocs, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, writeBatch, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- UYGULAMAYI ÇALIŞTIRMAK İÇİN YAPILMASI GEREKENLER ---
+        // 1. https://firebase.google.com/ adresinden bir Firebase projesi oluşturun.
+        // 2. Proje ayarlarından "Web uygulaması" (</>) oluşturun ve size verilen `firebaseConfig` nesnesini kopyalayın.
+        // 3. Kopyaladığınız nesneyi aşağıdaki `firebaseConfig` değişkeninin içine yapıştırın.
+        // 4. Firebase konsolunda, "Authentication" > "Sign-in method" sekmesine gidin ve "Anonymous" (Anonim) sağlayıcısını etkinleştirin.
+        // 5. Firebase konsolunda, "Firestore Database" oluşturun. Test modunda başlayabilirsiniz.
+        // 6. Bu dosyayı kaydedip tarayıcıda açtığınızda uygulamanız çalışacaktır.
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAOZnBm5thHSXoYTNr1mXbdaPjhtPz1j5U",
+            authDomain: "furkan-da0b3.firebaseapp.com",
+            projectId: "furkan-da0b3",
+            storageBucket: "furkan-da0b3.appspot.com",
+            messagingSenderId: "181195439888",
+            appId: "1:181195439888:web:84f7356f0dabd47d33af95",
+            measurementId: "G-KWQS7X9EC0"
+        };
+
+        // --- KODUN GERİ KALANI ---
+
+        const showToast = (message, type = 'success') => {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-times-circle'} mr-3"></i><p>${message}</p>`;
+            container.appendChild(toast);
+            setTimeout(() => toast.classList.add('show'), 10);
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        };
+
+        window.openModal = (modalId, id = null) => {
+            if (modalId === 'reconcileCardModal' && id) { document.getElementById('reconcileCardId').value = id; }
+            if (modalId === 'addTransactionModal' && id) { window.startEditTransaction(id); }
+            else if (modalId === 'addTransactionModal') { window.resetTransactionForm(); }
+            if (modalId === 'addRecurringModal' && id) { window.startEditRecurringTransaction(id); }
+            else if (modalId === 'addRecurringModal') { window.resetRecurringForm(); }
+            document.getElementById(modalId).classList.remove('hidden');
+        }
+        window.closeModal = (modalId) => { document.getElementById(modalId).classList.add('hidden'); }
+
+        const confirmModalConfirmBtn = document.getElementById('confirmModalConfirm');
+        const confirmModalCancelBtn = document.getElementById('confirmModalCancel');
+        
+        const showConfirmModal = (text, onConfirm) => {
+            document.getElementById('confirmModalText').textContent = text;
+            window.openModal('confirmModal');
+            const newConfirmBtn = confirmModalConfirmBtn.cloneNode(true);
+            confirmModalConfirmBtn.parentNode.replaceChild(newConfirmBtn, confirmModalConfirmBtn);
+            newConfirmBtn.addEventListener('click', () => {
+                onConfirm();
+                window.closeModal('confirmModal');
+            });
+        };
+        confirmModalCancelBtn.addEventListener('click', () => window.closeModal('confirmModal'));
+
+        let app, db, auth;
+        try {
+            app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+        } catch (error) {
+            console.error("Firebase başlatma hatası:", error);
+            document.body.innerHTML = `<div class="w-full h-screen flex items-center justify-center text-center p-8"><div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md"> <p class="font-bold">Firebase Yapılandırma Hatası!</p> <p class="mt-2">Lütfen kodun içindeki <code>firebaseConfig</code> nesnesini kendi Firebase proje bilgilerinizle güncellediğinizden emin olun.</p></div></div>`;
+        }
+
+        let userId = null;
+        let dbRefs = {};
+        
+        async function attemptSignIn() {
+            try {
+                await signInAnonymously(auth);
+            } catch (error) {
+                console.error("Anonim oturum açma hatası:", error);
+                let errorMessage = "Oturum Açılamadı. Lütfen internet bağlantınızı kontrol edin.";
+                
+                if (error.code === 'auth/configuration-not-found') {
+                     errorMessage = 'Lütfen Firebase projenizde "Authentication > Sign-in method" sekmesinden "Anonim" (Anonymous) giriş yöntemini etkinleştirdiğinizden emin olun.';
+                     
+                     let errorContainer = document.getElementById('auth-error-container');
+                     if (!errorContainer) {
+                        errorContainer = document.createElement('div');
+                        errorContainer.id = 'auth-error-container';
+                        errorContainer.innerHTML = `<div class="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center text-center p-8 z-50"><div class="bg-white rounded-lg shadow-xl p-8"><div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md"> <p class="font-bold">Firebase Yapılandırma Hatası!</p> <p class="mt-2">${errorMessage}</p><button id="retry-auth-btn" class="btn btn-primary mt-4">Yeniden Dene</button></div></div></div>`;
+                        document.body.appendChild(errorContainer);
+                        document.getElementById('retry-auth-btn').addEventListener('click', () => {
+                           const container = document.getElementById('auth-error-container');
+                           if(container) container.remove();
+                           attemptSignIn();
+                        });
+                     }
+                }
+                document.getElementById('userIdDisplay').textContent = "Hata!";
+            }
+        }
+
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                const authErrorDiv = document.getElementById('auth-error-container');
+                if (authErrorDiv) authErrorDiv.remove();
+
+                userId = user.uid;
+                document.getElementById('userIdDisplay').textContent = userId;
+                const userRoot = `users/${userId}`;
+                dbRefs.transactions = collection(db, userRoot, 'transactions');
+                dbRefs.creditCards = collection(db, userRoot, 'creditCards');
+                dbRefs.recurring = collection(db, userRoot, 'recurringTransactions');
+                dbRefs.meta = doc(db, userRoot, 'meta', 'appState');
+                await initializeAppLogic();
+            } else {
+                attemptSignIn();
+            }
+        });
+
+        async function initializeAppLogic() {
+            let transactions = [];
+            let creditCards = [];
+            let recurringTransactions = [];
+            let currentDate = new Date();
+            let recentTransactionsFilter = 'all'; 
+
+            const addTestDataIfEmpty = async () => {
+                const snapshot = await getDocs(query(dbRefs.creditCards));
+                if (snapshot.empty) {
+                    console.log("Veritabanı boş, dinamik test verileri ekleniyor...");
+                    const batch = writeBatch(db);
+                    const today = new Date();
+                    const currentYear = today.getFullYear();
+                    const currentMonth = today.getMonth();
+
+                    // --- Kartlar ---
+                    const card1Ref = doc(dbRefs.creditCards);
+                    batch.set(card1Ref, { name: 'Axess Platinum', limit: 70000, statementDay: 15, dueDay: 25 });
+
+                    const card2Ref = doc(dbRefs.creditCards);
+                    batch.set(card2Ref, { name: 'Bonus Card', limit: 45000, statementDay: 25, dueDay: 5 });
+
+                    // --- Düzenli İşlemler ---
+                    const recurringData = [
+                        { type: 'income', description: 'Maaş', amount: 45000, frequency: 'monthly', day: 1, category: 'Maaş' },
+                        { type: 'expense', description: 'Kira', amount: 15000, frequency: 'monthly', day: 5, category: 'Kira' },
+                        { type: 'expense', description: 'Netflix', amount: 229, frequency: 'monthly', day: 10, category: 'Eğlence' }
+                    ];
+                    recurringData.forEach(data => {
+                        batch.set(doc(dbRefs.recurring), { ...data, createdAt: serverTimestamp() });
+                    });
+
+                    // --- İşlemler ---
+                    const transactionsToAdd = [];
+
+                    // Geçen Ayın Ödemesi (Axess için) -> Bu ayki ekstrenin ödenmediğini test etmek için
+                    transactionsToAdd.push({
+                        type: 'cardPayment', toAccount: card1Ref.id, amount: 3000,
+                        description: `Axess Platinum Geçen Ay Ödemesi`, category: "Kart Ödemesi",
+                        date: new Date(currentYear, currentMonth - 1, 18)
+                    });
+
+                    // Kart 1 (Axess) için harcamalar (ekstresi kesildi)
+                    transactionsToAdd.push({
+                        type: "expense", description: "Büyük Market Alışverişi", amount: 2850, category: "Market",
+                        date: new Date(currentYear, currentMonth, 3), paid: true, paymentSource: card1Ref.id
+                    });
+                    transactionsToAdd.push({
+                        type: "expense", description: "Akaryakıt", amount: 1750, category: "Ulaşım",
+                        date: new Date(currentYear, currentMonth, 11), paid: true, paymentSource: card1Ref.id
+                    });
+
+                    // Kart 2 (Bonus) için harcamalar (ekstresi daha kesilmedi)
+                    transactionsToAdd.push({
+                        type: "expense", description: "Restoran Yemeği", amount: 1200, category: "Diğer",
+                        date: new Date(currentYear, currentMonth, 18), paid: true, paymentSource: card2Ref.id
+                    });
+                     transactionsToAdd.push({
+                        type: "expense", description: "Sinema Biletleri", amount: 450, category: "Eğlence",
+                        date: new Date(today.getFullYear(), today.getMonth(), today.getDate() - 2), paid: true, paymentSource: card2Ref.id
+                    });
+
+                    // Nakit Harcamalar ve Faturalar
+                    transactionsToAdd.push({
+                        type: "expense", description: "Elektrik Faturası", amount: 820, category: "Fatura",
+                        date: new Date(currentYear, currentMonth, 16), paid: false, paymentSource: 'Nakit',
+                        dueDate: new Date(currentYear, currentMonth, 28).toISOString()
+                    });
+                    transactionsToAdd.push({
+                        type: "expense", description: "Su Faturası", amount: 350, category: "Fatura",
+                        date: new Date(currentYear, currentMonth, 17), paid: true, paymentSource: 'Nakit',
+                        dueDate: new Date(currentYear, currentMonth, 17).toISOString()
+                    });
+
+                    transactionsToAdd.forEach(txn => {
+                        batch.set(doc(dbRefs.transactions), txn);
+                    });
+
+                    await batch.commit();
+                    console.log("Dinamik test verileri başarıyla eklendi.");
+                }
+            };
+            await addTestDataIfEmpty();
+
+            const formatCurrency = (amount) => new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(amount);
+            
+            window.app = {};
+            window.app.getCardById = (id) => creditCards.find(c => c.id === id);
+
+            const getSafeDate = (t) => {
+                if (!t || !t.date) return null;
+                if (t.date.seconds) return new Date(t.date.seconds * 1000);
+                try {
+                    const d = new Date(t.date);
+                    if (isNaN(d.getTime())) return null;
+                    return d;
+                } catch(e) { return null; }
+            };
+
+            const getCalculatedNakitBalance = () => {
+                const income = transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+                const nakitExpense = transactions.filter(t => t.type === 'expense' && t.paymentSource === 'Nakit' && t.paid).reduce((sum, t) => sum + t.amount, 0);
+                const cardPayments = transactions.filter(t => t.type === 'cardPayment').reduce((sum, t) => sum + t.amount, 0);
+                return income - nakitExpense - cardPayments;
+            };
+            const getCardDebt = (cardId) => {
+                const cardExpenses = transactions.filter(t => t.type === 'expense' && t.paymentSource === cardId).reduce((sum, t) => sum + t.amount, 0);
+                const cardPayments = transactions.filter(t => t.type === 'cardPayment' && t.toAccount === cardId).reduce((sum, t) => sum + t.amount, 0);
+                return cardExpenses - cardPayments;
+            };
+            const getTotalCardDebt = () => creditCards.reduce((total, card) => total + getCardDebt(card.id), 0);
+            const calculateMinimumPayment = (debt, limit) => {
+                const rate = limit > 25000 ? 0.40 : 0.20;
+                return Math.max(debt * rate, 0);
+            };
+            
+            const getCardStatementDebt = (card) => {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                let lastStatementDate = new Date(today.getFullYear(), today.getMonth(), card.statementDay);
+                if (today.getDate() <= card.statementDay) {
+                    lastStatementDate.setMonth(lastStatementDate.getMonth() - 1);
+                }
+
+                let previousStatementDate = new Date(lastStatementDate.getFullYear(), lastStatementDate.getMonth() - 1, card.statementDay);
+
+                const paidForThisPeriod = transactions.some(t =>
+                    t.type === 'cardPayment' &&
+                    t.toAccount === card.id &&
+                    getSafeDate(t) > lastStatementDate
+                );
+
+                if (paidForThisPeriod) return 0;
+
+                return transactions
+                    .filter(t =>
+                        t.type === 'expense' &&
+                        t.paymentSource === card.id &&
+                        getSafeDate(t) > previousStatementDate &&
+                        getSafeDate(t) <= lastStatementDate
+                    )
+                    .reduce((sum, t) => sum + t.amount, 0);
+            };
+
+            const generateUpcomingCardPayments = () => {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const upcomingPayments = [];
+
+                creditCards.forEach(card => {
+                    let lastStatementDate = new Date(today.getFullYear(), today.getMonth(), card.statementDay);
+                    if (today.getDate() <= card.statementDay) {
+                        lastStatementDate.setMonth(lastStatementDate.getMonth() - 1);
+                    }
+
+                    let dueDate = new Date(lastStatementDate.getFullYear(), lastStatementDate.getMonth(), card.dueDay);
+                    if (card.dueDay < card.statementDay) {
+                        dueDate.setMonth(dueDate.getMonth() + 1);
+                    }
+                    
+                    if (dueDate < today) return;
+
+                    const statementDebt = getCardStatementDebt(card);
+
+                    if (statementDebt > 0) {
+                        upcomingPayments.push({
+                            type: 'upcomingCardBill',
+                            cardId: card.id,
+                            description: `${card.name} Ekstre Borcu`,
+                            amount: statementDebt,
+                            dueDate: dueDate.toISOString()
+                        });
+                    }
+                });
+                return upcomingPayments;
+            };
+            
+            const generateRecurringInstances = async () => {
+                const metaDoc = await getDoc(dbRefs.meta);
+                const lastCheckTimestamp = metaDoc.data()?.lastRecurringCheck;
+                let lastCheckDate = lastCheckTimestamp ? new Date(lastCheckTimestamp.seconds * 1000) : null;
+
+                if (!lastCheckDate && recurringTransactions.length > 0) {
+                    const oldestRecurring = recurringTransactions
+                        .filter(rt => rt.createdAt instanceof Date)
+                        .reduce((oldest, current) => (!oldest || oldest.createdAt > current.createdAt) ? current : oldest, null);
+                    if (oldestRecurring) { lastCheckDate = oldestRecurring.createdAt; }
+                }
+                
+                if (!lastCheckDate) return;
+
+                const today = new Date();
+                const batch = writeBatch(db);
+                let hasNewTransactions = false;
+                let dateToProcess = new Date(lastCheckDate);
+                dateToProcess.setDate(1);
+
+                while (dateToProcess <= today) {
+                    const processYear = dateToProcess.getFullYear();
+                    const processMonth = dateToProcess.getMonth();
+                    recurringTransactions.forEach(rt => {
+                        if (!rt.createdAt || !(rt.createdAt instanceof Date)) return;
+                        const intervalMap = { 'monthly': 1, 'quarterly': 3, 'semi-annually': 6, 'annually': 12 };
+                        const interval = intervalMap[rt.frequency];
+                        const startMonth = rt.createdAt.getMonth();
+                        const startYear = rt.createdAt.getFullYear();
+                        const monthDiff = (processYear - startYear) * 12 + (processMonth - startMonth);
+                        if (monthDiff >= 0 && monthDiff % interval === 0) {
+                            const alreadyExists = transactions.some(t => {
+                                if (t.recurringId !== rt.id) return false;
+                                const tDate = getSafeDate(t);
+                                return tDate && tDate.getMonth() === processMonth && tDate.getFullYear() === processYear;
+                            });
+                            if (!alreadyExists) {
+                                const dueDate = new Date(processYear, processMonth, rt.day);
+                                const newTransaction = {
+                                    recurringId: rt.id, type: rt.type, description: rt.description, amount: rt.amount,
+                                    category: rt.category || (rt.type === 'income' ? 'Maaş' : 'Fatura'),
+                                    date: dueDate.toISOString(), dueDate: dueDate.toISOString(), paymentSource: 'Nakit', paid: rt.type === 'income',
+                                };
+                                batch.set(doc(dbRefs.transactions), newTransaction);
+                                hasNewTransactions = true;
+                            }
+                        }
+                    });
+                    dateToProcess.setMonth(dateToProcess.getMonth() + 1);
+                }
+                if (hasNewTransactions) { await batch.commit(); }
+                await setDoc(dbRefs.meta, { lastRecurringCheck: serverTimestamp() }, { merge: true });
+            };
+
+            const updateUI = () => {
+                const upcomingCardBills = generateUpcomingCardPayments();
+                document.getElementById('summary-wallet').textContent = formatCurrency(getCalculatedNakitBalance());
+                document.getElementById('summary-card-debt').textContent = formatCurrency(getTotalCardDebt());
+                const totalExpense = transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+                document.getElementById('summary-total-expense').textContent = formatCurrency(totalExpense);
+                const remainingNakitExpense = transactions.filter(t => t.type === 'expense' && !t.paid && t.paymentSource === 'Nakit').reduce((sum, t) => sum + t.amount, 0);
+                const remainingCardBills = upcomingCardBills.reduce((sum, bill) => sum + bill.amount, 0);
+                document.getElementById('summary-remaining-expense').textContent = formatCurrency(remainingNakitExpense + remainingCardBills);
+                renderRecentTransactions();
+                renderAllTransactions();
+                renderUpcomingPayments(upcomingCardBills);
+                renderCalendar(upcomingCardBills);
+                renderAgenda(upcomingCardBills);
+                renderCreditCards();
+                renderPaymentsPage(upcomingCardBills);
+                renderRecurringTransactions();
+            };
+            
+            const renderPaymentsPage = (upcomingCardBills) => {
+                const list = document.getElementById('payments-list');
+                list.innerHTML = '';
+                const unpaidNakit = transactions.filter(t => t.type === 'expense' && !t.paid && t.paymentSource === 'Nakit');
+                const allUnpaid = [...unpaidNakit, ...upcomingCardBills].sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+                if (allUnpaid.length === 0) { list.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-gray-500">Ödenecek işlem bulunmuyor.</td></tr>`; return; }
+                allUnpaid.forEach(t => {
+                    const row = document.createElement('tr');
+                    row.className = 'border-b border-gray-200 hover:bg-gray-50';
+                    let actionButton = t.type === 'upcomingCardBill'
+                        ? `<button class="btn btn-primary btn-sm" onclick="window.app.promptPayCardBill('${t.cardId}')">Faturayı Öde</button>`
+                        : `<button class="btn btn-secondary btn-sm" onclick="window.app.markAsPaid('${t.id}')">Öde</button>`;
+                    row.innerHTML = `<td class="p-3 font-medium">${t.description}</td><td class="p-3 text-gray-500">${new Date(t.dueDate).toLocaleDateString('tr-TR')}</td><td class="p-3 font-medium text-red-600">${formatCurrency(t.amount)}</td><td class="p-3">${actionButton}</td>`;
+                    list.appendChild(row);
+                });
+            };
+
+            const renderAllTransactions = () => {
+                const container = document.getElementById('transactions-accordion-container');
+                const summaryCard = document.getElementById('report-summary');
+                container.innerHTML = '';
+                
+                const searchTerm = document.getElementById('filter-search').value.toLowerCase();
+                const selectedCategory = document.getElementById('filter-category').value;
+                const startDate = document.getElementById('filter-date-start').value ? new Date(document.getElementById('filter-date-start').value) : null;
+                const endDate = document.getElementById('filter-date-end').value ? new Date(document.getElementById('filter-date-end').value) : null;
+                if(startDate) startDate.setHours(0,0,0,0);
+                if(endDate) endDate.setHours(23,59,59,999);
+                const minAmount = document.getElementById('filter-amount-min').value ? parseFloat(document.getElementById('filter-amount-min').value) : null;
+                const maxAmount = document.getElementById('filter-amount-max').value ? parseFloat(document.getElementById('filter-amount-max').value) : null;
+                const isAnyFilterActive = searchTerm || selectedCategory !== 'all' || startDate || endDate || minAmount !== null || maxAmount !== null;
+
+                let filteredTransactions = transactions.filter(t => {
+                    const tDate = getSafeDate(t);
+                    if (!tDate) return false;
+                    return t.description.toLowerCase().includes(searchTerm) &&
+                           (selectedCategory === 'all' || t.category === selectedCategory) &&
+                           (!startDate || tDate >= startDate) && (!endDate || tDate <= endDate) &&
+                           (minAmount === null || t.amount >= minAmount) &&
+                           (maxAmount === null || t.amount <= maxAmount);
+                });
+
+                if (isAnyFilterActive) {
+                    const totalIncome = filteredTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+                    const totalExpense = filteredTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+                    const netFlow = totalIncome - totalExpense;
+                    
+                    document.getElementById('report-total-income').textContent = formatCurrency(totalIncome);
+                    document.getElementById('report-total-expense').textContent = formatCurrency(totalExpense);
+                    document.getElementById('report-net-flow').textContent = formatCurrency(netFlow);
+                    document.getElementById('report-transaction-count').textContent = filteredTransactions.length;
+                    
+                    summaryCard.classList.remove('hidden');
+                } else {
+                    summaryCard.classList.add('hidden');
+                }
+
+                const getPeriodStartDate = (date) => {
+                    let periodDate = new Date(date.getTime());
+                    if (date.getDate() < 15) { periodDate.setMonth(periodDate.getMonth() - 1); }
+                    periodDate.setDate(15);
+                    periodDate.setHours(0, 0, 0, 0);
+                    return periodDate;
+                };
+                const grouped = filteredTransactions.reduce((acc, t) => {
+                    const tDate = getSafeDate(t);
+                    if (!tDate) return acc;
+                    const periodKey = getPeriodStartDate(tDate).toISOString();
+                    if (!acc[periodKey]) { acc[periodKey] = []; }
+                    acc[periodKey].push(t);
+                    return acc;
+                }, {});
+                const sortedPeriods = Object.keys(grouped).sort((a, b) => new Date(b) - new Date(a));
+                if (sortedPeriods.length === 0) { container.innerHTML = `<div class="card text-center text-gray-500">Filtre kriterlerine uygun işlem bulunamadı.</div>`; return; }
+                
+                sortedPeriods.forEach(periodKey => {
+                    const periodTransactions = grouped[periodKey].sort((a, b) => getSafeDate(b) - getSafeDate(a));
+                    const periodStartDate = new Date(periodKey);
+                    const periodEndDate = new Date(periodStartDate);
+                    periodEndDate.setMonth(periodEndDate.getMonth() + 1);
+                    periodEndDate.setDate(periodEndDate.getDate() - 1);
+                    const periodLabel = `15 ${periodStartDate.toLocaleDateString('tr-TR', { month: 'long' })} - 14 ${periodEndDate.toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' })}`;
+                    const pendingCount = periodTransactions.filter(t => t.paymentSource === 'Nakit' && !t.paid).length;
+                    
+                    const accordionItem = document.createElement('div');
+                    accordionItem.className = 'card p-0';
+                    const tableRows = periodTransactions.map(t => {
+                        let descriptionHtml, statusHtml;
+                        const actionsHtml = `<td class="p-3"><div class="flex gap-2">${!t.isAdjustment ? `<button onclick="window.openModal('addTransactionModal', '${t.id}')" class="text-blue-500 hover:text-blue-700"><i class="fas fa-pencil-alt"></i></button><button onclick="window.app.deleteTransaction('${t.id}')" class="text-red-500 hover:text-red-700"><i class="fas fa-trash-alt"></i></button>` : ''}</div></td>`;
+                        const transactionDate = getSafeDate(t);
+                        const sourceName = t.paymentSource === 'Nakit' ? 'Nakit' : (window.app.getCardById(t.paymentSource)?.name || 'Bilinmeyen Kart');
+                        
+                        if (t.isAdjustment) {
+                            descriptionHtml = `<td class="p-3 font-medium">${t.description}<div class="text-sm text-gray-400 font-normal">${sourceName} için otomatik düzeltme</div></td>`;
+                            statusHtml = `<td class="p-3"><span class="text-sm font-medium text-yellow-600">Bakiye Düzeltmesi</span></td>`;
+                        } else {
+                            switch(t.type) {
+                                case 'income':
+                                    descriptionHtml = `<td class="p-3 font-medium">${t.description}<div class="text-sm text-gray-400 font-normal">Nakit</div></td>`;
+                                    statusHtml = `<td class="p-3"><span class="text-sm font-medium text-green-600">Gelir</span></td>`;
+                                    break;
+                                case 'expense':
+                                    descriptionHtml = `<td class="p-3 font-medium">${t.description}<div class="text-sm text-gray-400 font-normal">Kaynak: ${sourceName}</div></td>`;
+                                    statusHtml = t.paymentSource === 'Nakit'
+                                        ? `<td class="p-3">${t.paid ? `<span class="text-sm font-medium text-gray-500">Ödendi</span>` : `<span class="text-sm font-medium text-orange-500">Ödenmedi</span>`}</td>`
+                                        : `<td class="p-3"><span class="text-sm font-medium text-purple-600">${sourceName} Harcaması</span></td>`;
+                                    break;
+                                case 'cardPayment':
+                                    descriptionHtml = `<td class="p-3 font-medium">${t.description}<div class="text-sm text-gray-400 font-normal">Nakit Hesaptan</div></td>`;
+                                    statusHtml = `<td class="p-3"><span class="text-sm font-medium text-blue-600">Kart Ödemesi</span></td>`;
+                                    break;
+                            }
+                        }
+                        const dateHtml = `<td class="p-3 text-gray-500">${transactionDate.toLocaleDateString('tr-TR')}</td>`;
+                        const amountHtml = `<td class="p-3 font-medium ${t.type === 'income' ? 'text-green-600' : (t.type === 'expense' ? 'text-red-600' : 'text-blue-600')}">${formatCurrency(t.amount)}</td>`;
+                        return `<tr>${descriptionHtml}${dateHtml}${amountHtml}${statusHtml}${actionsHtml}</tr>`;
+                    }).join('');
+
+                    accordionItem.innerHTML = `
+                        <button class="accordion-header w-full flex justify-between items-center p-4 text-left">
+                            <span class="font-bold text-lg text-gray-700">${periodLabel}</span>
+                            <div class="flex items-center gap-3">
+                                ${pendingCount > 0 ? `<span class="bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded-full">${pendingCount} Bekleyen</span>` : ''}
+                                <i class="fas fa-chevron-down transition-transform"></i>
+                            </div>
+                        </button>
+                        <div class="accordion-content">
+                            <div class="p-4 border-t border-gray-200 overflow-x-auto">
+                                <table class="w-full text-left">
+                                    <thead class="border-b-2 border-gray-200"><tr><th class="p-3 text-sm font-semibold text-gray-500">Açıklama / Kaynak</th><th class="p-3 text-sm font-semibold text-gray-500">Tarih</th><th class="p-3 text-sm font-semibold text-gray-500">Tutar</th><th class="p-3 text-sm font-semibold text-gray-500">Durum</th><th class="p-3 text-sm font-semibold text-gray-500">İşlemler</th></tr></thead>
+                                    <tbody>${tableRows}</tbody>
+                                </table>
+                            </div>
+                        </div>`;
+                    container.appendChild(accordionItem);
+                    accordionItem.querySelector('.accordion-header').addEventListener('click', (e) => {
+                        const content = e.currentTarget.nextElementSibling;
+                        const icon = e.currentTarget.querySelector('i');
+                        if (content.style.maxHeight) {
+                            content.style.maxHeight = null;
+                            icon.style.transform = 'rotate(0deg)';
+                        } else {
+                            content.style.maxHeight = content.scrollHeight + "px";
+                            icon.style.transform = 'rotate(180deg)';
+                        }
+                    });
+                });
+            }
+            
+            function renderRecurringTransactions() {
+                const list = document.getElementById('recurring-list');
+                list.innerHTML = '';
+                if (recurringTransactions.length === 0) { list.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-gray-500">Tanımlanmış düzenli işlem yok.</td></tr>`; return; }
+                const frequencyMap = { 'monthly': 'Her Ay', 'quarterly': '3 Ayda Bir', 'semi-annually': '6 Ayda Bir', 'annually': 'Her Yıl' };
+                recurringTransactions.forEach(rt => {
+                    const row = document.createElement('tr');
+                    row.className = 'border-b border-gray-200';
+                    row.innerHTML = `<td class="p-3 font-medium">${rt.description}</td><td class="p-3 font-medium ${rt.type === 'income' ? 'text-green-600' : 'text-red-600'}">${formatCurrency(rt.amount)}</td><td class="p-3 text-gray-500">${frequencyMap[rt.frequency]} (Ayın ${rt.day}. günü)</td><td class="p-3"><div class="flex gap-2"><button onclick="window.openModal('addRecurringModal', '${rt.id}')" class="text-blue-500 hover:text-blue-700"><i class="fas fa-pencil-alt"></i></button><button onclick="window.app.deleteRecurringTransaction('${rt.id}')" class="text-red-500 hover:text-red-700"><i class="fas fa-trash-alt"></i></button></div></td>`;
+                    list.appendChild(row);
+                });
+            }
+
+            function renderCreditCards() {
+                const list = document.getElementById('credit-card-list');
+                list.innerHTML = '';
+                if (creditCards.length === 0) { list.innerHTML = `<p class="text-center text-gray-500 md:col-span-2 xl:col-span-3">Henüz kredi kartı eklenmemiş.</p>`; return; }
+                creditCards.forEach(card => {
+                    const debt = getCardDebt(card.id);
+                    const statementDebt = getCardStatementDebt(card);
+                    const availableLimit = card.limit - debt;
+                    const usagePercentage = card.limit > 0 ? (debt / card.limit) * 100 : 0;
+                    
+                    const cardHtml = `<div class="card flex flex-col gap-4">
+                        <div class="credit-card-visual">
+                            <div class="flex justify-between items-start"><span class="font-bold text-xl">${card.name}</span><div class="text-right text-xs"><p>Kesim: ${card.statementDay}</p><p>Son Ödeme: ${card.dueDay}</p></div></div>
+                            <div class="text-right">
+                                ${statementDebt > 0 ? `<p class="text-sm opacity-80">Ekstre Borcu</p><p class="text-lg font-semibold">${formatCurrency(statementDebt)}</p>` : ''}
+                                <p class="text-sm opacity-80 ${statementDebt > 0 ? 'mt-1' : ''}">Güncel Toplam Borç</p>
+                                <p class="text-2xl font-semibold">${formatCurrency(debt)}</p>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span>Limit: ${formatCurrency(card.limit)}</span>
+                                <span class="font-medium text-green-600">Kalan: ${formatCurrency(availableLimit)}</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2.5"><div class="bg-gradient-to-r from-purple-500 to-indigo-500 h-2.5 rounded-full" style="width: ${Math.min(usagePercentage, 100)}%"></div></div>
+                        </div>
+                        <div class="flex justify-end gap-2 mt-2">
+                            <button class="btn btn-secondary btn-sm" onclick="window.openModal('reconcileCardModal', '${card.id}')"><i class="fas fa-sync-alt"></i> Borcu Eşitle</button>
+                        </div>
+                    </div>`;
+                    list.innerHTML += cardHtml;
+                });
+            }
+            
+            function renderRecentTransactions() {
+                const list = document.getElementById('recent-transactions-list');
+                list.innerHTML = '';
+                let sourceTransactions = transactions.filter(t => !t.isAdjustment && (t.type !== 'expense' || t.paymentSource !== 'Nakit' || t.paid));
+                let recent = (recentTransactionsFilter === 'significant'
+                    ? sourceTransactions.filter(t => (t.type === 'income' || t.type === 'expense') && t.amount >= 2000)
+                    : sourceTransactions
+                ).sort((a, b) => getSafeDate(b) - getSafeDate(a)).slice(0, 7);
+
+                if (recent.length === 0) { list.innerHTML = `<p class="text-center py-8 text-gray-500">Gösterilecek işlem yok.</p>`; return; }
+                
+                recent.forEach(t => {
+                    const transactionDate = getSafeDate(t);
+                    const icon = t.type === 'income' ? 'fa-arrow-up text-green-500' : (t.type === 'expense' ? 'fa-arrow-down text-red-500' : 'fa-credit-card text-blue-500');
+                    const amountPrefix = t.type === 'income' ? '+' : '-';
+                    list.innerHTML += `<div class="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50"><div class="flex items-center gap-4"><i class="fas ${icon} bg-gray-100 p-2 rounded-full"></i><div><p class="font-semibold">${t.description}</p><p class="text-sm text-gray-500">${transactionDate.toLocaleDateString('tr-TR')}</p></div></div><div class="text-right"><p class="font-bold ${t.type === 'income' ? 'text-green-600' : (t.type === 'expense' ? 'text-red-600' : 'text-blue-600')}">${t.type === 'cardPayment' ? '' : amountPrefix}${formatCurrency(t.amount)}</p><p class="text-xs text-gray-400">${t.category}</p></div></div>`;
+                });
+            }
+            function renderUpcomingPayments(upcomingCardBills) {
+                const list = document.getElementById('upcoming-payments-list');
+                list.innerHTML = '';
+                const today = new Date(); today.setHours(0, 0, 0, 0);
+                const upcomingNakit = transactions.filter(t => t.type === 'expense' && !t.paid && t.dueDate && t.paymentSource === 'Nakit');
+                const allUpcoming = [...upcomingNakit, ...upcomingCardBills].sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+                if (allUpcoming.length === 0) { list.innerHTML = `<p class="text-center py-8 text-gray-500">Yaklaşan ödeme yok.</p>`; return; }
+                allUpcoming.slice(0, 5).forEach(t => {
+                    const dueDate = new Date(t.dueDate);
+                    const diffDays = Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
+                    let statusText, statusColor;
+                    if (diffDays < 0) { statusText = `${Math.abs(diffDays)} gün geçti`; statusColor = 'text-red-600'; }
+                    else if (diffDays === 0) { statusText = 'Bugün'; statusColor = 'text-orange-500'; }
+                    else { statusText = `${diffDays} gün kaldı`; statusColor = 'text-blue-600'; }
+                    list.innerHTML += `<div class="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50"><div><p class="font-semibold">${t.description}</p><p class="text-sm ${statusColor} font-medium">${statusText}</p></div><p class="font-bold text-gray-800">${formatCurrency(t.amount)}</p></div>`;
+                });
+            }
+            function renderCalendar(upcomingCardBills) {
+                const year = currentDate.getFullYear();
+                const month = currentDate.getMonth();
+                document.getElementById('month-year').textContent = `${new Intl.DateTimeFormat('tr-TR', { month: 'long' }).format(currentDate)} ${year}`;
+                const grid = document.getElementById('calendar-grid');
+                grid.innerHTML = '';
+                const firstDay = new Date(year, month, 1).getDay();
+                const daysInMonth = new Date(year, month + 1, 0).getDate();
+                const dayOffset = (firstDay === 0) ? 6 : firstDay - 1;
+                const unpaidPaymentDays = new Set([...transactions.filter(t => t.dueDate && t.paymentSource === 'Nakit' && !t.paid).map(t => new Date(t.dueDate).toDateString()), ...upcomingCardBills.map(b => new Date(b.dueDate).toDateString())]);
+                const paidPaymentDays = new Set(transactions.filter(t => t.dueDate && t.paymentSource === 'Nakit' && t.paid).map(t => new Date(t.dueDate).toDateString()));
+                for (let i = 0; i < dayOffset; i++) { grid.innerHTML += `<div class="empty"></div>`; }
+                for (let day = 1; day <= daysInMonth; day++) {
+                    const dayEl = document.createElement('div');
+                    dayEl.textContent = day;
+                    dayEl.classList.add('calendar-day');
+                    const thisDate = new Date(year, month, day).toDateString();
+                    if (unpaidPaymentDays.has(thisDate)) { dayEl.classList.add('has-payment'); } 
+                    else if (paidPaymentDays.has(thisDate)) { dayEl.classList.add('all-paid'); }
+                    dayEl.addEventListener('click', () => {
+                        document.querySelectorAll('.calendar-day.selected').forEach(d => d.classList.remove('selected'));
+                        dayEl.classList.add('selected');
+                        renderAgenda(upcomingCardBills, new Date(thisDate));
+                    });
+                    grid.appendChild(dayEl);
+                }
+                const summaryContainer = document.getElementById('calendar-summary');
+                const dailyStats = {};
+                const allDueItems = [...transactions.filter(t => t.dueDate && !t.paid), ...upcomingCardBills];
+                allDueItems.forEach(t => {
+                    const tDate = new Date(t.dueDate);
+                    if (tDate && tDate.getFullYear() === year && tDate.getMonth() === month) {
+                        const day = tDate.getDate();
+                        if (!dailyStats[day]) dailyStats[day] = { out: 0 };
+                        dailyStats[day].out++;
+                    }
+                });
+                let summaryHtml = '<div class="mt-4 pt-4 border-t border-gray-200 space-y-2">';
+                const sortedDays = Object.keys(dailyStats).sort((a, b) => a - b);
+                if (sortedDays.length === 0) {
+                    summaryHtml += '<p class="text-sm text-gray-500 text-center">Bu ay için bekleyen işlem yok.</p>';
+                } else {
+                    sortedDays.forEach(day => {
+                        const stats = dailyStats[day];
+                        summaryHtml += `<div class="flex justify-between items-center text-sm p-2 rounded-md hover:bg-gray-50"><span class="font-bold">${day} ${new Intl.DateTimeFormat('tr-TR', { month: 'long' }).format(currentDate)}</span><div class="flex gap-3"><span class="flex items-center gap-1 text-red-600" title="Bekleyen Gider"><i class="fas fa-arrow-down fa-xs"></i> ${stats.out}</span></div></div>`;
+                    });
+                }
+                summaryHtml += '</div>';
+                summaryContainer.innerHTML = summaryHtml;
+            }
+            function renderAgenda(upcomingCardBills, filterDate = null) {
+                const agendaList = document.getElementById('agenda-list');
+                agendaList.innerHTML = '';
+                let allPayments;
+                const nakitPayments = transactions.filter(t => t.dueDate && t.paymentSource === 'Nakit');
+                if (filterDate) {
+                    allPayments = [...nakitPayments, ...upcomingCardBills].filter(p => p.dueDate && new Date(p.dueDate).toDateString() === filterDate.toDateString());
+                } else {
+                    const year = currentDate.getFullYear();
+                    const month = currentDate.getMonth();
+                    allPayments = [...nakitPayments, ...upcomingCardBills].filter(p => p.dueDate && new Date(p.dueDate).getFullYear() === year && new Date(p.dueDate).getMonth() === month);
+                }
+                allPayments.sort((a,b) => new Date(a.dueDate) - new Date(b.dueDate));
+                if (allPayments.length === 0) { agendaList.innerHTML = `<p class="text-center py-8 text-gray-500">Seçili dönem için ödeme yok.</p>`; return; }
+                allPayments.forEach(t => {
+                    const isPaid = t.paid || (t.type === 'upcomingCardBill' && !upcomingCardBills.find(b => b.cardId === t.cardId));
+                    const descriptionClass = isPaid ? 'line-through text-gray-400' : '';
+                    const icon = isPaid ? 'fa-check-circle text-green-500' : (t.type === 'upcomingCardBill' ? 'fa-credit-card text-purple-500' : 'fa-money-bill text-red-500');
+                    agendaList.innerHTML += `<div class="flex items-center justify-between p-3 rounded-lg bg-gray-50"><div class="flex items-center gap-4"><i class="fas ${icon}"></i><div><p class="font-semibold ${descriptionClass}">${t.description}</p><p class="text-sm text-gray-500 ${descriptionClass}">${new Date(t.dueDate).toLocaleDateString('tr-TR')}</p></div></div><p class="font-bold text-gray-800 ${descriptionClass}">${formatCurrency(t.amount)}</p></div>`;
+                });
+            }
+            
+            // --- MODAL VE FORM FONKSİYONLARI ---
+            function buildTransactionForm(type) {
+                const formFieldsContainer = document.getElementById('form-fields-container');
+                formFieldsContainer.innerHTML = '';
+                let fieldsHtml = '';
+                const paymentSourcesOptions = creditCards.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+                switch (type) {
+                    case 'expense':
+                        fieldsHtml = `<div><label for="description" class="block mb-2 text-sm font-medium text-gray-600">Açıklama</label><input type="text" id="description" class="input-field" required></div><div><label for="amount" class="block mb-2 text-sm font-medium text-gray-600">Tutar</label><input type="number" id="amount" step="0.01" class="input-field" required></div><div><label for="paymentSource" class="block mb-2 text-sm font-medium text-gray-600">Ödeme Kaynağı</label><select id="paymentSource" class="input-field"><option value="Nakit">Nakit</option>${paymentSourcesOptions}</select></div><div><label for="dueDate" class="block mb-2 text-sm font-medium text-gray-600">Son Ödeme Tarihi (Nakit ise)</label><input type="date" id="dueDate" class="input-field"></div><div><label for="category" class="block mb-2 text-sm font-medium text-gray-600">Kategori</label><select id="category" class="input-field"><option>Fatura</option><option>Market</option><option>Ulaşım</option><option>Kira</option><option>Eğlence</option><option>Diğer</option></select></div>`;
+                        break;
+                    case 'income':
+                        fieldsHtml = `<div><label for="description" class="block mb-2 text-sm font-medium text-gray-600">Açıklama</label><input type="text" id="description" class="input-field" required></div><div><label for="amount" class="block mb-2 text-sm font-medium text-gray-600">Tutar</label><input type="number" id="amount" step="0.01" class="input-field" required></div><div><label for="category" class="block mb-2 text-sm font-medium text-gray-600">Kategori</label><select id="category" class="input-field"><option>Maaş</option><option>Kira</option><option>Diğer</option></select></div>`;
+                        break;
+                    case 'cardPayment':
+                        fieldsHtml = `<div><label for="toAccount" class="block mb-2 text-sm font-medium text-gray-600">Ödenen Kart</label><select id="toAccount" class="input-field" required>${paymentSourcesOptions}</select></div><div id="card-payment-info" class="p-3 bg-blue-50 border-l-4 border-blue-400 text-blue-700 rounded-md hidden"></div><div><label for="amount" class="block mb-2 text-sm font-medium text-gray-600">Ödenen Tutar</label><input type="number" id="amount" step="0.01" class="input-field" required></div>`;
+                        break;
+                }
+                formFieldsContainer.innerHTML = fieldsHtml;
+                if (type === 'cardPayment') {
+                    const toAccountSelect = document.getElementById('toAccount');
+                    const infoBox = document.getElementById('card-payment-info');
+                    const updateInfo = () => {
+                        const selectedCardId = toAccountSelect.value;
+                        if (selectedCardId) {
+                            const debt = getCardDebt(selectedCardId);
+                            infoBox.innerHTML = `<p>Bu kart için hesaplanan borç: <strong>${formatCurrency(debt)}</strong></p><p class="text-xs mt-1">Eğer ekstrenizdeki borç farklıysa, ödeme yapmadan önce Kredi Kartları sayfasından <strong>'Borcu Eşitle'</strong> özelliğini kullanın.</p>`;
+                            infoBox.classList.remove('hidden');
+                        } else { infoBox.classList.add('hidden'); }
+                    };
+                    toAccountSelect.addEventListener('change', updateInfo);
+                    updateInfo();
+                }
+            }
+            
+            window.startEditTransaction = (id) => {
+                const transaction = transactions.find(t => t.id === id);
+                if (!transaction) return;
+                document.getElementById('transactionModalTitle').textContent = 'İşlemi Düzenle';
+                document.getElementById('editingTransactionId').value = id;
+                document.getElementById('transactionType').value = transaction.type;
+                buildTransactionForm(transaction.type);
+                document.getElementById('description').value = transaction.description;
+                document.getElementById('amount').value = transaction.amount;
+                document.getElementById('category').value = transaction.category;
+                if (transaction.type === 'expense') {
+                    document.getElementById('paymentSource').value = transaction.paymentSource;
+                    if (document.getElementById('dueDate')) {
+                        document.getElementById('dueDate').value = transaction.dueDate ? transaction.dueDate.split('T')[0] : '';
+                    }
+                }
+            };
+            window.resetTransactionForm = () => {
+                document.getElementById('transactionModalTitle').textContent = 'Yeni İşlem';
+                document.getElementById('editingTransactionId').value = '';
+                document.getElementById('transaction-form').reset();
+                buildTransactionForm('expense');
+            };
+            window.startEditRecurringTransaction = (id) => {
+                const rt = recurringTransactions.find(r => r.id === id);
+                if (!rt) return;
+                document.getElementById('recurringModalTitle').textContent = 'Düzenli İşlemi Düzenle';
+                document.getElementById('editingRecurringId').value = id;
+                document.getElementById('recurringType').value = rt.type;
+                document.getElementById('recurringDescription').value = rt.description;
+                document.getElementById('recurringAmount').value = rt.amount;
+                document.getElementById('recurringFrequency').value = rt.frequency;
+                document.getElementById('recurringDay').value = rt.day;
+                const categoryContainer = document.getElementById('recurring-category-container');
+                categoryContainer.style.display = rt.type === 'expense' ? 'block' : 'none';
+                if (rt.type === 'expense') {
+                    document.getElementById('recurringCategory').value = rt.category || 'Fatura';
+                }
+            };
+            window.resetRecurringForm = () => {
+                document.getElementById('recurringModalTitle').textContent = 'Yeni Düzenli İşlem';
+                document.getElementById('editingRecurringId').value = '';
+                document.getElementById('recurring-form').reset();
+                document.getElementById('recurring-category-container').style.display = 'block';
+            };
+
+            // --- İŞLEM FONKSİYONLARI (CRUD) ---
+            window.app.markAsPaid = async (id) => { 
+                try {
+                    await updateDoc(doc(dbRefs.transactions, id), { paid: true, date: serverTimestamp() });
+                    showToast('Ödeme olarak işaretlendi!');
+                } catch (error) {
+                    showToast('İşlem güncellenemedi: ' + error.message, 'error');
+                }
+            };
+            window.app.deleteTransaction = (id) => {
+                showConfirmModal('Bu işlemi silmek istediğinizden emin misiniz?', async () => {
+                    try {
+                        await deleteDoc(doc(dbRefs.transactions, id));
+                        showToast('İşlem silindi!');
+                    } catch (error) {
+                        showToast('İşlem silinemedi: ' + error.message, 'error');
+                    }
+                });
+            };
+            window.app.deleteRecurringTransaction = (id) => {
+                showConfirmModal('Bu düzenli işlemi silmek istediğinizden emin misiniz?', async () => {
+                    try {
+                        await deleteDoc(doc(dbRefs.recurring, id));
+                        showToast('Düzenli işlem silindi!');
+                    } catch (error) {
+                        showToast('İşlem silinemedi: ' + error.message, 'error');
+                    }
+                });
+            };
+            window.app.promptPayCardBill = (cardId) => {
+                const card = window.app.getCardById(cardId);
+                if (!card) { console.error("Kart bulunamadı:", cardId); return; }
+                const debt = getCardDebt(cardId);
+                const minPayment = calculateMinimumPayment(debt, card.limit);
+                document.getElementById('payCardBillTitle').textContent = `${card.name} Fatura Ödeme`;
+                const infoContainer = document.getElementById('payCardBillInfo');
+                infoContainer.innerHTML = `<div class="text-center"><p>Toplam Borç</p><p class="text-2xl font-bold">${formatCurrency(debt)}</p></div><div class="text-center"><p>Hesaplanan Asgari Tutar</p><p class="text-lg font-semibold">${formatCurrency(minPayment)}</p></div><div class="p-3 bg-yellow-100 border-l-4 border-yellow-400 text-yellow-800 mt-4 rounded-md text-sm">Eğer ekstrenizdeki borç farklıysa, önce 'Borcu Eşitle' özelliğini kullanmanız önerilir.</div><div class="flex justify-center gap-2 pt-4"><button class="btn btn-secondary" onclick="window.openModal('reconcileCardModal', '${cardId}'); window.closeModal('payCardBillModal');">Borcu Eşitle</button><button class="btn btn-secondary" onclick="window.app.executeCardPayment('${cardId}', ${minPayment})">Asgari Tutarı Öde</button><button class="btn btn-primary" onclick="window.app.executeCardPayment('${cardId}', ${debt})">Tümünü Öde</button></div>`;
+                window.openModal('payCardBillModal');
+            };
+
+            window.app.executeCardPayment = async (cardId, amount) => {
+                if (amount <= 0) return;
+                const card = window.app.getCardById(cardId);
+                if (!card) {
+                    showToast('Ödeme yapılacak kart bilgisi bulunamadı.', 'error');
+                    console.error("executeCardPayment failed: Card not found for ID:", cardId);
+                    return;
+                }
+                try {
+                    const description = `${card.name} Ödemesi`;
+                    await addDoc(dbRefs.transactions, {
+                        type: 'cardPayment', toAccount: cardId, amount: amount,
+                        description: description, category: "Kart Ödemesi", date: serverTimestamp()
+                    });
+                    showToast(`${formatCurrency(amount)} tutarındaki ödeme kaydedildi!`);
+                    window.closeModal('payCardBillModal');
+                } catch (error) {
+                    showToast('Ödeme kaydedilemedi: ' + error.message, 'error');
+                    console.error("executeCardPayment error:", error);
+                }
+            };
+
+            // --- OLAY DİNLEYİCİLERİ (EVENT LISTENERS) ---
+            function setupEventListeners() {
+                document.querySelectorAll('.nav-link:not(.cursor-not-allowed)').forEach(link => {
+                    link.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        const pageId = link.dataset.page;
+                        document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+                        link.classList.add('active');
+                        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+                        document.getElementById(pageId).classList.add('active');
+                    });
+                });
+
+                document.getElementById('transactionType').addEventListener('change', (e) => buildTransactionForm(e.target.value));
+                document.getElementById('prev-month').addEventListener('click', () => { currentDate.setMonth(currentDate.getMonth() - 1); updateUI(); });
+                document.getElementById('next-month').addEventListener('click', () => { currentDate.setMonth(currentDate.getMonth() + 1); updateUI(); });
+                document.getElementById('recurringType').addEventListener('change', (e) => {
+                    document.getElementById('recurring-category-container').style.display = e.target.value === 'expense' ? 'block' : 'none';
+                });
+                document.getElementById('filter-apply-btn').addEventListener('click', updateUI);
+                document.getElementById('filter-reset-btn').addEventListener('click', () => {
+                    document.getElementById('filter-search').value = '';
+                    document.getElementById('filter-category').value = 'all';
+                    document.getElementById('filter-date-start').value = '';
+                    document.getElementById('filter-date-end').value = '';
+                    document.getElementById('filter-amount-min').value = '';
+                    document.getElementById('filter-amount-max').value = '';
+                    updateUI();
+                });
+                document.getElementById('recent-transactions-toggle').addEventListener('click', (e) => {
+                    if(e.target.tagName === 'BUTTON'){
+                        document.querySelectorAll('#recent-transactions-toggle .filter-btn').forEach(btn => btn.classList.remove('active'));
+                        e.target.classList.add('active');
+                        recentTransactionsFilter = e.target.dataset.filter;
+                        updateUI();
+                    }
+                });
+
+                const handleFormSubmit = async (form, callback) => {
+                    const submitBtn = form.querySelector('button[type="submit"]');
+                    submitBtn.disabled = true;
+                    try {
+                        await callback();
+                    } catch (error) {
+                        console.error("Form submission error:", error);
+                        showToast('Bir hata oluştu: ' + error.message, 'error');
+                    } finally {
+                        submitBtn.disabled = false;
+                    }
+                };
+
+                document.getElementById('transaction-form').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    handleFormSubmit(e.target, async () => {
+                        const editingId = document.getElementById('editingTransactionId').value;
+                        const type = document.getElementById('transactionType').value;
+                        let transactionData = { date: serverTimestamp() };
+                        if (type === 'income' || type === 'expense') {
+                            Object.assign(transactionData, {
+                                type,
+                                description: document.getElementById('description').value,
+                                amount: parseFloat(document.getElementById('amount').value),
+                                category: document.getElementById('category').value,
+                            });
+                            if (type === 'expense') {
+                                const paymentSource = document.getElementById('paymentSource').value;
+                                const dueDateValue = document.getElementById('dueDate').value;
+                                transactionData.paymentSource = paymentSource;
+                                transactionData.dueDate = paymentSource === 'Nakit' && dueDateValue ? new Date(dueDateValue).toISOString() : null;
+                                transactionData.paid = paymentSource !== 'Nakit';
+                            } else { transactionData.paid = true; }
+                        } else if (type === 'cardPayment') {
+                            const toAccount = document.getElementById('toAccount').value;
+                            const card = window.app.getCardById(toAccount);
+                            const description = card ? `${card.name} Ödemesi` : 'Kredi Kartı Ödemesi';
+                            Object.assign(transactionData, {
+                                type: 'cardPayment', toAccount,
+                                amount: parseFloat(document.getElementById('amount').value),
+                                description: description, category: "Kart Ödemesi",
+                            });
+                        }
+                        if (editingId) {
+                            await setDoc(doc(dbRefs.transactions, editingId), transactionData, { merge: true });
+                            showToast('İşlem başarıyla güncellendi!');
+                        } else {
+                            await addDoc(dbRefs.transactions, transactionData);
+                            showToast('İşlem başarıyla eklendi!');
+                        }
+                        window.closeModal('addTransactionModal');
+                    });
+                });
+
+                document.getElementById('recurring-form').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    handleFormSubmit(e.target, async () => {
+                        const editingId = document.getElementById('editingRecurringId').value;
+                        const type = document.getElementById('recurringType').value;
+                        const recurringData = {
+                            type,
+                            description: document.getElementById('recurringDescription').value,
+                            amount: parseFloat(document.getElementById('recurringAmount').value),
+                            frequency: document.getElementById('recurringFrequency').value,
+                            day: parseInt(document.getElementById('recurringDay').value),
+                            category: type === 'expense' ? document.getElementById('recurringCategory').value : 'Maaş'
+                        };
+                        if(editingId){
+                            await setDoc(doc(dbRefs.recurring, editingId), recurringData, { merge: true });
+                            showToast('Düzenli işlem güncellendi!');
+                        } else {
+                            recurringData.createdAt = serverTimestamp();
+                            await addDoc(dbRefs.recurring, recurringData);
+                            showToast('Düzenli işlem eklendi!');
+                        }
+                        window.closeModal('addRecurringModal');
+                    });
+                });
+
+                document.getElementById('add-card-form').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    handleFormSubmit(e.target, async () => {
+                        const newCard = {
+                            name: document.getElementById('cardName').value,
+                            limit: parseFloat(document.getElementById('cardLimit').value),
+                            statementDay: parseInt(document.getElementById('cardStatementDay').value),
+                            dueDay: parseInt(document.getElementById('cardDueDay').value)
+                        };
+                        await addDoc(dbRefs.creditCards, newCard);
+                        e.target.reset();
+                        window.closeModal('addCardModal');
+                        showToast('Yeni kredi kartı eklendi!');
+                    });
+                });
+
+                document.getElementById('reconcile-form').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    handleFormSubmit(e.target, async () => {
+                        const actualBalance = parseFloat(document.getElementById('actualBalance').value);
+                        const calculatedBalance = getCalculatedNakitBalance();
+                        const difference = actualBalance - calculatedBalance;
+                        if (difference !== 0) {
+                            await addDoc(dbRefs.transactions, { description: "Nakit Bakiye Düzeltmesi", amount: Math.abs(difference), category: "Düzeltme", type: difference > 0 ? "income" : "expense", date: serverTimestamp(), paid: true, paymentSource: 'Nakit', isAdjustment: true });
+                        }
+                        e.target.reset();
+                        window.closeModal('reconcileModal');
+                        showToast('Nakit bakiye eşitlendi!');
+                    });
+                });
+
+                document.getElementById('reconcile-card-form').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    handleFormSubmit(e.target, async () => {
+                        const cardId = document.getElementById('reconcileCardId').value;
+                        const actualDebt = parseFloat(document.getElementById('actualCardDebt').value);
+                        const calculatedDebt = getCardDebt(cardId);
+                        const difference = actualDebt - calculatedDebt;
+                        if (difference > 0) {
+                            await addDoc(dbRefs.transactions, { description: "Kaydedilmemiş Kart Harcamaları", amount: difference, category: "Düzeltme", type: "expense", date: serverTimestamp(), paid: true, paymentSource: cardId, isAdjustment: true });
+                        }
+                        e.target.reset();
+                        window.closeModal('reconcileCardModal');
+                        showToast('Kart borcu eşitlendi!');
+                    });
+                });
+            }
+
+            const setupFirestoreListeners = () => {
+                onSnapshot(dbRefs.transactions, (snapshot) => {
+                    transactions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    updateUI();
+                });
+                onSnapshot(dbRefs.creditCards, (snapshot) => {
+                    creditCards = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    updateUI();
+                });
+                onSnapshot(dbRefs.recurring, (snapshot) => {
+                    recurringTransactions = snapshot.docs.map(doc => {
+                        const data = doc.data();
+                        if (data.createdAt?.seconds) {
+                            data.createdAt = new Date(data.createdAt.seconds * 1000);
+                        }
+                        return { id: doc.id, ...data };
+                    });
+                    generateRecurringInstances();
+                    updateUI();
+                });
+            };
+
+            setupEventListeners();
+            setupFirestoreListeners();
+            buildTransactionForm('expense');
+        }
+    </script>
+</body>
+</html>
