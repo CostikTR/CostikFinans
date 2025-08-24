@@ -1,0 +1,156 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+body {
+    font-family: 'Inter', sans-serif;
+    font-size: 16px; /* Temel yazı tipi boyutu */
+    background-color: #f9fafb; /* gray-50 */
+    color: #111827; /* gray-900 */
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.dark body {
+    background-color: #111827; /* dark:gray-900 */
+    color: #d1d5db; /* dark:gray-300 */
+}
+.fade-in {
+    animation: fadeIn 0.5s ease-in-out;
+}
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.modal-overlay {
+    transition: opacity 0.3s ease;
+}
+.modal-container {
+    transition: transform 0.3s ease;
+}
+/* Custom scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: #d1d5db; /* gray-300 */
+    border-radius: 20px;
+}
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: #4b5563; /* dark:gray-600 */
+}
+.paid-transaction {
+    text-decoration: line-through;
+    opacity: 0.6;
+}
+.transaction-item .actions {
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+}
+.transaction-item:hover .actions {
+    opacity: 1;
+}
+/* Notes list active item style */
+.note-list-item.active {
+    background-color: #eef2ff; /* indigo-50 */
+}
+.dark .note-list-item.active {
+    background-color: #3730a3; /* dark:indigo-800 */
+}
+/* Quill Editor Styling */
+#note-editor-container .ql-toolbar {
+    border-top-left-radius: 0.5rem;
+    border-top-right-radius: 0.5rem;
+    border-color: #d1d5db; /* gray-300 */
+}
+#note-editor-container .ql-container {
+    border-bottom-left-radius: 0.5rem;
+    border-bottom-right-radius: 0.5rem;
+    border-color: #d1d5db; /* gray-300 */
+    font-size: 1rem;
+}
+.dark #note-editor-container .ql-toolbar, .dark #note-editor-container .ql-container {
+    border-color: #4b5563; /* dark:gray-600 */
+}
+.dark #note-editor-container .ql-editor {
+    color: #d1d5db; /* dark:text-gray-300 */
+}
+.dark #note-editor-container .ql-snow .ql-stroke {
+    stroke: #9ca3af;
+}
+.dark #note-editor-container .ql-snow .ql-picker-label {
+    color: #9ca3af;
+}
+/* Snackbar and Notification Styling */
+.notification-bar {
+    transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+    transform: translateY(-100%);
+    opacity: 0;
+}
+.notification-bar.show {
+    transform: translateY(0);
+    opacity: 1;
+}
+/* Yükleme animasyonu için stil */
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+.spinner {
+    border: 4px solid rgba(255, 255, 255, 0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+}
+/* Geri Al Snackbar Stili */
+#undo-snackbar {
+    transform: translate(-50%, 100px);
+    opacity: 0;
+    transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+    z-index: 40;
+}
+#undo-snackbar.show {
+    transform: translate(-50%, 0);
+    opacity: 1;
+}
+/* Hızlı Eylem Butonu Stilleri */
+#add-transaction-icon.rotate-45 {
+    transform: rotate(45deg);
+}
+#quick-action-menu {
+    transition: transform 0.2s ease-out, opacity 0.2s ease-out;
+}
+/* Yeni Menü Stilleri */
+.sidebar-link {
+    transition: background-color 0.2s, color 0.2s;
+}
+.sidebar-link.active {
+    background-color: #4f46e5; /* indigo-600 */
+    color: white;
+    font-weight: 600;
+}
+.sidebar-link.active i {
+    color: white;
+}
+/* Kart Tema Seçimi Stili */
+input[name="cardTheme"]:checked + span {
+    ring: 2px;
+    ring-offset: 2px;
+    --tw-ring-offset-color: #fff;
+    --tw-ring-color: #6366f1;
+}
+.dark input[name="cardTheme"]:checked + span {
+     --tw-ring-offset-color: #1e293b;
+}
+/* Sürükle-Bırak Stilleri */
+.draggable-card .drag-handle {
+    cursor: move;
+}
+.sortable-ghost {
+    opacity: 0.4;
+    background: #c7d2fe; /* indigo-200 */
+}
+.dark .sortable-ghost {
+    background: #3730a3; /* dark:indigo-800 */
+}
