@@ -42,6 +42,10 @@
         .toast-success { background-color: #22c55e; }
         .toast-error { background-color: #ef4444; }
         .code-block { background-color: #1f2937; color: #d1d5db; padding: 1rem; border-radius: 0.5rem; font-family: monospace; white-space: pre-wrap; word-break: break-all; text-align: left; }
+        /* Toggle switch styles */
+        input:checked + div { background-color: #3b82f6; }
+        input:checked + div .dot { transform: translateX(100%); }
+        .dot { transition: transform 0.3s ease; }
     </style>
 </head>
 <body class="bg-gray-100">
@@ -106,7 +110,7 @@
                     <a href="#" class="nav-link" data-page="transactions"><i class="fas fa-exchange-alt w-6 text-center"></i><span>Tüm İşlemler</span></a>
                     <a href="#" class="nav-link" data-page="calendar"><i class="fas fa-calendar-alt w-6 text-center"></i><span>Takvim</span></a>
                     <a href="#" class="nav-link" data-page="cards"><i class="fas fa-credit-card w-6 text-center"></i><span>Kredi Kartları</span></a>
-                    <a href="#" class="nav-link text-gray-400 cursor-not-allowed" data-page="settings"><i class="fas fa-cog w-6 text-center"></i><span>Ayarlar</span></a>
+                    <a href="#" class="nav-link" data-page="settings"><i class="fas fa-cog w-6 text-center"></i><span>Ayarlar</span></a>
                 </nav>
             </div>
             <div class="mt-auto">
@@ -259,6 +263,90 @@
                     <div class="lg:col-span-2 card"><h3 class="text-xl font-bold mb-4">Ajanda</h3><div id="agenda-list" class="space-y-3"></div></div>
                 </div>
             </div>
+            <div id="settings" class="page">
+                <header class="flex flex-wrap justify-between items-center mb-8 gap-4">
+                    <div><h1 class="text-3xl font-bold text-gray-800">Ayarlar</h1><p class="text-gray-500">Uygulama tercihlerinizi ve hesap ayarlarınızı yönetin.</p></div>
+                </header>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div class="card">
+                        <h3 class="text-xl font-bold mb-4">Hesap Bilgileri</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block mb-2 text-sm font-medium text-gray-600">E-posta Adresi</label>
+                                <p id="userEmail" class="text-gray-800 bg-gray-50 p-3 rounded-md">Yükleniyor...</p>
+                            </div>
+                            <div>
+                                <label class="block mb-2 text-sm font-medium text-gray-600">Kullanıcı ID</label>
+                                <p id="userIdSettings" class="text-gray-800 bg-gray-50 p-3 rounded-md break-all">Yükleniyor...</p>
+                            </div>
+                            <div>
+                                <label class="block mb-2 text-sm font-medium text-gray-600">Hesap Oluşturma Tarihi</label>
+                                <p id="userCreationDate" class="text-gray-800 bg-gray-50 p-3 rounded-md">Yükleniyor...</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3 class="text-xl font-bold mb-4">Uygulama Tercihleri</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block mb-2 text-sm font-medium text-gray-600">Tema</label>
+                                <select id="themeSelect" class="input-field">
+                                    <option value="light">Açık Tema</option>
+                                    <option value="dark">Koyu Tema (Yakında)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block mb-2 text-sm font-medium text-gray-600">Para Birimi</label>
+                                <select id="currencySelect" class="input-field">
+                                    <option value="TRY">Türk Lirası (₺)</option>
+                                    <option value="USD">ABD Doları ($)</option>
+                                    <option value="EUR">Euro (€)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="checkbox" id="notificationsEnabled" class="sr-only">
+                                    <div class="relative">
+                                        <div class="block bg-gray-600 w-14 h-8 rounded-full"></div>
+                                        <div class="dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition"></div>
+                                    </div>
+                                    <div class="ml-3 text-gray-700 font-medium">Bildirimler</div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3 class="text-xl font-bold mb-4">Veri Yönetimi</h3>
+                        <div class="space-y-4">
+                            <div class="p-4 bg-blue-50 border-l-4 border-blue-400 text-blue-700 rounded-md">
+                                <h4 class="font-semibold mb-2">Verileriniz Güvende</h4>
+                                <p class="text-sm">Tüm verileriniz Firebase güvenli veri tabanında şifrelenerek saklanmaktadır.</p>
+                            </div>
+                            <div>
+                                <button class="btn btn-secondary w-full mb-2" onclick="exportData()">
+                                    <i class="fas fa-download"></i> Verilerimi Dışa Aktar
+                                </button>
+                                <p class="text-xs text-gray-500">Tüm işlem verilerinizi JSON formatında indirebilirsiniz.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3 class="text-xl font-bold mb-4 text-red-600">Tehlikeli Bölge</h3>
+                        <div class="space-y-4">
+                            <div class="p-4 bg-red-50 border-l-4 border-red-400 text-red-700 rounded-md">
+                                <h4 class="font-semibold mb-2">Dikkat!</h4>
+                                <p class="text-sm">Aşağıdaki işlemler geri alınamaz. Lütfen dikkatli olun.</p>
+                            </div>
+                            <div>
+                                <button class="btn btn-danger w-full" onclick="confirmDeleteAccount()">
+                                    <i class="fas fa-trash"></i> Hesabımı Sil
+                                </button>
+                                <p class="text-xs text-gray-500 mt-2">Bu işlem tüm verilerinizi kalıcı olarak siler.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </main>
     </div>
 
@@ -346,7 +434,7 @@
     <!-- Firebase SDK -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, deleteUser } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, getDocs, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, writeBatch, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -1209,6 +1297,11 @@ service cloud.firestore {
                         link.classList.add('active');
                         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
                         document.getElementById(pageId).classList.add('active');
+                        
+                        // Setup settings page when it's opened
+                        if (pageId === 'settings') {
+                            setupSettings();
+                        }
                     });
                 });
 
@@ -1405,6 +1498,117 @@ service cloud.firestore {
                     },
                     (error) => handleError(error, 'Düzenli İşlemler')
                 );
+            };
+
+            // Settings page functions
+            const setupSettings = () => {
+                // Populate user information
+                if (auth.currentUser) {
+                    const user = auth.currentUser;
+                    document.getElementById('userEmail').textContent = user.email || 'Bilinmiyor';
+                    document.getElementById('userIdSettings').textContent = user.uid;
+                    
+                    // Format creation date
+                    const creationTime = user.metadata.creationTime;
+                    if (creationTime) {
+                        const date = new Date(creationTime);
+                        document.getElementById('userCreationDate').textContent = date.toLocaleDateString('tr-TR');
+                    }
+                }
+
+                // Load saved preferences
+                const savedTheme = localStorage.getItem('finans_theme') || 'light';
+                const savedCurrency = localStorage.getItem('finans_currency') || 'TRY';
+                const savedNotifications = localStorage.getItem('finans_notifications') !== 'false';
+
+                document.getElementById('themeSelect').value = savedTheme;
+                document.getElementById('currencySelect').value = savedCurrency;
+                document.getElementById('notificationsEnabled').checked = savedNotifications;
+
+                // Setup event listeners for settings
+                document.getElementById('themeSelect').addEventListener('change', (e) => {
+                    localStorage.setItem('finans_theme', e.target.value);
+                    showToast('Tema tercihiniz kaydedildi.');
+                });
+
+                document.getElementById('currencySelect').addEventListener('change', (e) => {
+                    localStorage.setItem('finans_currency', e.target.value);
+                    showToast('Para birimi tercihiniz kaydedildi.');
+                });
+
+                document.getElementById('notificationsEnabled').addEventListener('change', (e) => {
+                    localStorage.setItem('finans_notifications', e.target.checked);
+                    showToast(e.target.checked ? 'Bildirimler açıldı.' : 'Bildirimler kapatıldı.');
+                });
+            };
+
+            window.exportData = async () => {
+                try {
+                    const data = {
+                        exportDate: new Date().toISOString(),
+                        transactions: transactions,
+                        creditCards: creditCards,
+                        recurringTransactions: recurringTransactions
+                    };
+
+                    const dataStr = JSON.stringify(data, null, 2);
+                    const dataBlob = new Blob([dataStr], {type: 'application/json'});
+                    const url = URL.createObjectURL(dataBlob);
+                    
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `finans_verilerim_${new Date().toISOString().split('T')[0]}.json`;
+                    link.click();
+
+                    URL.revokeObjectURL(url);
+                    showToast('Verileriniz başarıyla dışa aktarıldı!');
+                } catch (error) {
+                    showToast('Veri dışa aktarımında hata oluştu: ' + error.message, 'error');
+                }
+            };
+
+            window.confirmDeleteAccount = () => {
+                showConfirmModal(
+                    'Hesabınızı silmek istediğinizden emin misiniz? Bu işlem tüm verilerinizi kalıcı olarak siler ve geri alınamaz.',
+                    deleteAccount
+                );
+            };
+
+            const deleteAccount = async () => {
+                try {
+                    // Delete all user data from Firestore first
+                    const batch = writeBatch(db);
+                    
+                    // Delete all user's transactions
+                    transactions.forEach(t => {
+                        batch.delete(doc(dbRefs.transactions, t.id));
+                    });
+
+                    // Delete all user's cards
+                    creditCards.forEach(c => {
+                        batch.delete(doc(dbRefs.creditCards, c.id));
+                    });
+
+                    // Delete all user's recurring transactions
+                    recurringTransactions.forEach(rt => {
+                        batch.delete(doc(dbRefs.recurring, rt.id));
+                    });
+
+                    // Delete meta document
+                    batch.delete(dbRefs.meta);
+
+                    await batch.commit();
+
+                    // Delete user account
+                    await deleteUser(auth.currentUser);
+                    
+                    showToast('Hesabınız başarıyla silindi.');
+                    // Reload page to return to login
+                    setTimeout(() => window.location.reload(), 2000);
+                } catch (error) {
+                    console.error('Hesap silme hatası:', error);
+                    showToast('Hesap silinirken bir hata oluştu: ' + error.message, 'error');
+                }
             };
 
             setupEventListeners();
