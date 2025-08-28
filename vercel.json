@@ -1,0 +1,9 @@
+{
+  "framework": "nextjs",
+  "buildCommand": "pnpm build",
+  "installCommand": "pnpm install --frozen-lockfile && pnpm approve-builds",
+  "outputDirectory": ".next",
+  "functions": {
+    "runtime": "nodejs22.x"
+  }
+}
