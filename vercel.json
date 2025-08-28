@@ -4,6 +4,11 @@
   "installCommand": "pnpm install --frozen-lockfile && pnpm approve-builds",
   "outputDirectory": ".next",
   "functions": {
-    "runtime": "nodejs22.x"
+    "api/**/*.js": {
+      "runtime": "nodejs22.x"
+    },
+    "app/**/route.js": {
+      "runtime": "nodejs22.x"
+    }
   }
 }
