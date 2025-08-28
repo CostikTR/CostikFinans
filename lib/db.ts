@@ -229,14 +229,28 @@ export async function listCards(userId: string): Promise<BankCard[]> {
   if (!db || !userId) return []
   const q = query(collection(db, "users", userId, CARDS_SUB), orderBy("updatedAt", "desc"))
   const snap = await getDocs(q)
-  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })) as BankCard[]
+  return snap.docs.map((d) => {
+    const data = d.data() as any
+    // Backward compat: map legacy 'dueDate' to 'paymentDueDate' if needed
+    if (!('paymentDueDate' in data) && 'dueDate' in data) {
+      data.paymentDueDate = data.dueDate
+    }
+    return { id: d.id, ...data } as BankCard
+  })
 }
 
 export function watchCards(userId: string, cb: (list: BankCard[]) => void): Unsubscribe | null {
   if (!db || !userId) return null
   const q = query(collection(db, "users", userId, CARDS_SUB), orderBy("updatedAt", "desc"))
   return onSnapshot(q, (snap) => {
-    cb(snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })) as BankCard[])
+    const list = snap.docs.map((d) => {
+      const data = d.data() as any
+      if (!('paymentDueDate' in data) && 'dueDate' in data) {
+        data.paymentDueDate = data.dueDate
+      }
+      return { id: d.id, ...data } as BankCard
+    })
+    cb(list)
   })
 }
 
