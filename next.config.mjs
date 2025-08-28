@@ -1,5 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Cloudflare Pages gibi statik barındırma için "out/" klasörüne export al
+  output: 'export',
   eslint: {
     ignoreDuringBuilds: true,
   },
