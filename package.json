@@ -2,9 +2,9 @@
   "name": "my-v0-project",
   "version": "0.1.0",
   "private": true,
-  "packageManager": "pnpm@8.15.8",
+  "packageManager": "pnpm@10.15.0",
   "engines": {
-    "node": ">=18 <21"
+    "node": ">=18 <=22"
   },
   "scripts": {
     "build": "next build",
