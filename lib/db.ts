@@ -256,7 +256,8 @@ export async function upsertCard(userId: string, card: Omit<BankCard, "id" | "up
     creditLimit: typeof (card as any).creditLimit === "number" ? (card as any).creditLimit : Number((card as any).creditLimit) || 0,
     currentDebt: typeof (card as any).currentDebt === "number" ? (card as any).currentDebt : Number((card as any).currentDebt) || 0,
     statementDate: norm(card.statementDate),
-    dueDate: norm(card.dueDate),
+  // Keep field name consistent with BankCard.paymentDueDate across app and Firestore
+  paymentDueDate: norm((card as any).paymentDueDate),
     minimumPayment: typeof (card as any).minimumPayment === "number" ? (card as any).minimumPayment : Number((card as any).minimumPayment) || 0,
     status: norm(card.status) ?? "active",
     cardColor: norm(card.cardColor),
