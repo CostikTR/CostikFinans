@@ -695,15 +695,49 @@
                 dbRefs.meta = doc(db, userRoot, 'meta', 'appState');
                 await initializeAppLogic();
             } else {
+                // Kullanıcı çıkış yaptı, verileri temizle
+                console.log('User logged out, clearing data...');
                 document.getElementById('loginPage').classList.remove('hidden');
                 userId = null;
                 userEmail = null;
+                
+                // Global flag'leri sıfırla
+                window.eventListenersSetup = false;
+                window.firestoreListenersSetup = false;
+                
+                // Chart instance'larını temizle
+                if (window.cashFlowChart) {
+                    window.cashFlowChart.destroy();
+                    window.cashFlowChart = null;
+                }
+                if (window.debtTrendChart) {
+                    window.debtTrendChart.destroy();
+                    window.debtTrendChart = null;
+                }
+                if (window.assetDistChart) {
+                    window.assetDistChart.destroy();
+                    window.assetDistChart = null;
+                }
+                if (window.monthlyTrendChart) {
+                    window.monthlyTrendChart.destroy();
+                    window.monthlyTrendChart = null;
+                }
             }
         });
 
         async function initializeAppLogic() {
             console.log('Initializing app logic...');
             console.log('Chart.js available at init:', typeof Chart !== 'undefined');
+            console.log('User ID:', userId);
+            
+            if (!userId) {
+                console.error('No user ID available, cannot initialize app logic');
+                return;
+            }
+            
+            // Global flag'leri başlangıçta sıfırla
+            window.eventListenersSetup = false;
+            window.firestoreListenersSetup = false;
             
             let transactions = [];
             let creditCards = [];
@@ -713,84 +747,6 @@
             let appSettings = { salaryDay: 15 };
             let currentDate = new Date();
             let recentTransactionsFilter = 'all'; 
-
-            const addTestDataIfEmpty = async () => {
-                const snapshot = await getDocs(query(dbRefs.creditCards));
-                if (snapshot.empty) {
-                    console.log("Veritabanı boş, dinamik test verileri ekleniyor...");
-                    const batch = writeBatch(db);
-                    const today = new Date();
-                    const currentYear = today.getFullYear();
-                    const currentMonth = today.getMonth();
-
-                    // --- Kartlar ---
-                    const card1Ref = doc(dbRefs.creditCards);
-                    batch.set(card1Ref, { name: 'Axess Platinum', limit: 70000, statementDay: 15, dueDay: 25 });
-
-                    const card2Ref = doc(dbRefs.creditCards);
-                    batch.set(card2Ref, { name: 'Bonus Card', limit: 45000, statementDay: 25, dueDay: 5 });
-
-                    // --- Düzenli İşlemler ---
-                    const recurringData = [
-                        { type: 'income', description: 'Maaş', amount: 45000, frequency: 'monthly', day: 1, category: 'Maaş' },
-                        { type: 'expense', description: 'Kira', amount: 15000, frequency: 'monthly', day: 5, category: 'Kira' },
-                        { type: 'expense', description: 'Netflix', amount: 229, frequency: 'monthly', day: 10, category: 'Eğlence' }
-                    ];
-                    recurringData.forEach(data => {
-                        batch.set(doc(dbRefs.recurring), { ...data, createdAt: serverTimestamp() });
-                    });
-
-                    // --- İşlemler ---
-                    const transactionsToAdd = [];
-
-                    // Geçen Ayın Ödemesi (Axess için) -> Bu ayki ekstrenin ödenmediğini test etmek için
-                    transactionsToAdd.push({
-                        type: 'cardPayment', toAccount: card1Ref.id, amount: 3000,
-                        description: `Axess Platinum Geçen Ay Ödemesi`, category: "Kart Ödemesi",
-                        date: new Date(currentYear, currentMonth - 1, 18)
-                    });
-
-                    // Kart 1 (Axess) için harcamalar (ekstresi kesildi)
-                    transactionsToAdd.push({
-                        type: "expense", description: "Büyük Market Alışverişi", amount: 2850, category: "Market",
-                        date: new Date(currentYear, currentMonth, 3), paid: true, paymentSource: card1Ref.id
-                    });
-                    transactionsToAdd.push({
-                        type: "expense", description: "Akaryakıt", amount: 1750, category: "Ulaşım",
-                        date: new Date(currentYear, currentMonth, 11), paid: true, paymentSource: card1Ref.id
-                    });
-
-                    // Kart 2 (Bonus) için harcamalar (ekstresi daha kesilmedi)
-                    transactionsToAdd.push({
-                        type: "expense", description: "Restoran Yemeği", amount: 1200, category: "Diğer",
-                        date: new Date(currentYear, currentMonth, 18), paid: true, paymentSource: card2Ref.id
-                    });
-                     transactionsToAdd.push({
-                        type: "expense", description: "Sinema Biletleri", amount: 450, category: "Eğlence",
-                        date: new Date(today.getFullYear(), today.getMonth(), today.getDate() - 2), paid: true, paymentSource: card2Ref.id
-                    });
-
-                    // Nakit Harcamalar ve Faturalar
-                    transactionsToAdd.push({
-                        type: "expense", description: "Elektrik Faturası", amount: 820, category: "Fatura",
-                        date: new Date(currentYear, currentMonth, 16), paid: false, paymentSource: 'Nakit',
-                        dueDate: new Date(currentYear, currentMonth, 28).toISOString()
-                    });
-                    transactionsToAdd.push({
-                        type: "expense", description: "Su Faturası", amount: 350, category: "Fatura",
-                        date: new Date(currentYear, currentMonth, 17), paid: true, paymentSource: 'Nakit',
-                        dueDate: new Date(currentYear, currentMonth, 17).toISOString()
-                    });
-
-                    transactionsToAdd.forEach(txn => {
-                        batch.set(doc(dbRefs.transactions), txn);
-                    });
-
-                    await batch.commit();
-                    console.log("Dinamik test verileri başarıyla eklendi.");
-                }
-            };
-            await addTestDataIfEmpty();
 
             const formatCurrency = (amount) => new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(amount);
             
@@ -1087,7 +1043,7 @@
                         }
                         const dateHtml = `<td class="p-3 text-gray-500">${transactionDate.toLocaleDateString('tr-TR')}</td>`;
                         const amountHtml = `<td class="p-3 font-medium ${t.type === 'income' ? 'text-green-600' : (t.type === 'expense' ? 'text-red-600' : 'text-blue-600')}">${formatCurrency(t.amount)}</td>`;
-                        return `<tr>${descriptionHtml}${dateHtml}${amountHtml}${statusHtml}${actionsHtml}</tr>`;
+                        return `<tr data-transaction-id="${t.id}">${descriptionHtml}${dateHtml}${amountHtml}${statusHtml}${actionsHtml}</tr>`;
                     }).join('');
 
                     accordionItem.innerHTML = `
@@ -1129,6 +1085,7 @@
                 recurringTransactions.forEach(rt => {
                     const row = document.createElement('tr');
                     row.className = 'border-b border-gray-200';
+                    row.setAttribute('data-recurring-id', rt.id);
                     row.innerHTML = `<td class="p-3 font-medium">${rt.description}</td><td class="p-3 font-medium ${rt.type === 'income' ? 'text-green-600' : 'text-red-600'}">${formatCurrency(rt.amount)}</td><td class="p-3 text-gray-500">${frequencyMap[rt.frequency]} (Ayın ${rt.day}. günü)</td><td class="p-3"><div class="flex gap-2"><button onclick="window.openModal('addRecurringModal', '${rt.id}')" class="text-blue-500 hover:text-blue-700"><i class="fas fa-pencil-alt"></i></button><button onclick="window.app.deleteRecurringTransaction('${rt.id}')" class="text-red-500 hover:text-red-700"><i class="fas fa-trash-alt"></i></button></div></td>`;
                     list.appendChild(row);
                 });
@@ -1143,7 +1100,7 @@
                     return; 
                 }
                 assets.forEach(asset => {
-                    const assetHtml = `<div class="card">
+                    const assetHtml = `<div class="card" data-asset-id="${asset.id}">
                         <div class="flex justify-between items-start mb-4">
                             <div>
                                 <h3 class="text-lg font-bold">${asset.name}</h3>
@@ -1175,7 +1132,7 @@
                     const noteDate = note.createdAt && note.createdAt.seconds ? 
                         new Date(note.createdAt.seconds * 1000).toLocaleDateString('tr-TR') : 
                         'Tarih belirtilmemiş';
-                    const noteHtml = `<div class="card">
+                    const noteHtml = `<div class="card" data-note-id="${note.id}">
                         <div class="flex justify-between items-start mb-2">
                             <h3 class="text-lg font-bold">${note.title}</h3>
                             <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">${note.category}</span>
@@ -1806,20 +1763,62 @@
             window.app.deleteTransaction = (id) => {
                 showConfirmModal('Bu işlemi silmek istediğinizden emin misiniz?', async () => {
                     try {
+                        console.log('Deleting transaction:', id);
+                        
+                        // UI'dan hemen kaldır (optimistic update)
+                        const transactionElement = document.querySelector(`[data-transaction-id="${id}"]`);
+                        if (transactionElement) {
+                            transactionElement.style.opacity = '0.5';
+                            transactionElement.style.pointerEvents = 'none';
+                        }
+                        
                         await deleteDoc(doc(dbRefs.transactions, id));
+                        console.log('Transaction deleted successfully:', id);
                         showToast('İşlem silindi!');
+                        
+                        // UI'ı manuel olarak güncelle
+                        updateUI();
                     } catch (error) {
+                        console.error('Delete transaction error:', error);
                         showToast('İşlem silinemedi: ' + error.message, 'error');
+                        
+                        // Hata durumunda UI'ı geri yükle
+                        const transactionElement = document.querySelector(`[data-transaction-id="${id}"]`);
+                        if (transactionElement) {
+                            transactionElement.style.opacity = '1';
+                            transactionElement.style.pointerEvents = 'auto';
+                        }
                     }
                 });
             };
             window.app.deleteRecurringTransaction = (id) => {
                 showConfirmModal('Bu düzenli işlemi silmek istediğinizden emin misiniz?', async () => {
                     try {
+                        console.log('Deleting recurring transaction:', id);
+                        
+                        // UI'dan hemen kaldır (optimistic update)
+                        const recurringElement = document.querySelector(`[data-recurring-id="${id}"]`);
+                        if (recurringElement) {
+                            recurringElement.style.opacity = '0.5';
+                            recurringElement.style.pointerEvents = 'none';
+                        }
+                        
                         await deleteDoc(doc(dbRefs.recurring, id));
+                        console.log('Recurring transaction deleted successfully:', id);
                         showToast('Düzenli işlem silindi!');
+                        
+                        // UI'ı manuel olarak güncelle
+                        updateUI();
                     } catch (error) {
+                        console.error('Delete recurring transaction error:', error);
                         showToast('İşlem silinemedi: ' + error.message, 'error');
+                        
+                        // Hata durumunda UI'ı geri yükle
+                        const recurringElement = document.querySelector(`[data-recurring-id="${id}"]`);
+                        if (recurringElement) {
+                            recurringElement.style.opacity = '1';
+                            recurringElement.style.pointerEvents = 'auto';
+                        }
                     }
                 });
             };
@@ -1884,10 +1883,31 @@
             window.app.deleteAsset = (assetId) => {
                 showConfirmModal('Bu varlığı silmek istediğinizden emin misiniz?', async () => {
                     try {
+                        console.log('Deleting asset:', assetId);
+                        
+                        // UI'dan hemen kaldır (optimistic update)
+                        const assetElement = document.querySelector(`[data-asset-id="${assetId}"]`);
+                        if (assetElement) {
+                            assetElement.style.opacity = '0.5';
+                            assetElement.style.pointerEvents = 'none';
+                        }
+                        
                         await deleteDoc(doc(dbRefs.assets, assetId));
+                        console.log('Asset deleted successfully:', assetId);
                         showToast('Varlık silindi!');
+                        
+                        // UI'ı manuel olarak güncelle
+                        updateUI();
                     } catch (error) {
+                        console.error('Delete asset error:', error);
                         showToast('Varlık silinemedi: ' + error.message, 'error');
+                        
+                        // Hata durumunda UI'ı geri yükle
+                        const assetElement = document.querySelector(`[data-asset-id="${assetId}"]`);
+                        if (assetElement) {
+                            assetElement.style.opacity = '1';
+                            assetElement.style.pointerEvents = 'auto';
+                        }
                     }
                 });
             };
@@ -1906,16 +1926,45 @@
             window.app.deleteNote = (noteId) => {
                 showConfirmModal('Bu notu silmek istediğinizden emin misiniz?', async () => {
                     try {
+                        console.log('Deleting note:', noteId);
+                        
+                        // UI'dan hemen kaldır (optimistic update)
+                        const noteElement = document.querySelector(`[data-note-id="${noteId}"]`);
+                        if (noteElement) {
+                            noteElement.style.opacity = '0.5';
+                            noteElement.style.pointerEvents = 'none';
+                        }
+                        
                         await deleteDoc(doc(dbRefs.notes, noteId));
+                        console.log('Note deleted successfully:', noteId);
                         showToast('Not silindi!');
+                        
+                        // UI'ı manuel olarak güncelle
+                        updateUI();
                     } catch (error) {
+                        console.error('Delete note error:', error);
                         showToast('Not silinemedi: ' + error.message, 'error');
+                        
+                        // Hata durumunda UI'ı geri yükle
+                        const noteElement = document.querySelector(`[data-note-id="${noteId}"]`);
+                        if (noteElement) {
+                            noteElement.style.opacity = '1';
+                            noteElement.style.pointerEvents = 'auto';
+                        }
                     }
                 });
             };
 
             // --- OLAY DİNLEYİCİLERİ (EVENT LISTENERS) ---
             function setupEventListeners() {
+                // Event listener'ların birden fazla eklenmemesi için kontrol
+                if (window.eventListenersSetup) {
+                    console.log('Event listeners already setup, skipping...');
+                    return;
+                }
+                console.log('Setting up event listeners...');
+                window.eventListenersSetup = true;
+                
                 document.querySelectorAll('.nav-link').forEach(link => {
                     link.addEventListener('click', (e) => {
                         e.preventDefault();
@@ -2223,15 +2272,26 @@
             }
 
             const setupFirestoreListeners = () => {
+                // Listener'ların birden fazla kurulmasını engelle
+                if (window.firestoreListenersSetup) {
+                    console.log('Firestore listeners already setup, skipping...');
+                    return;
+                }
+                console.log('Setting up Firestore listeners for user:', userId);
+                window.firestoreListenersSetup = true;
+                
                 onSnapshot(dbRefs.transactions, (snapshot) => {
+                    console.log('Transactions updated:', snapshot.docs.length);
                     transactions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                     updateUI();
                 });
                 onSnapshot(dbRefs.creditCards, (snapshot) => {
+                    console.log('Credit cards updated:', snapshot.docs.length);
                     creditCards = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                     updateUI();
                 });
                 onSnapshot(dbRefs.recurring, (snapshot) => {
+                    console.log('Recurring transactions updated:', snapshot.docs.length);
                     recurringTransactions = snapshot.docs.map(doc => {
                         const data = doc.data();
                         if (data.createdAt?.seconds) {
@@ -2243,10 +2303,12 @@
                     updateUI();
                 });
                 onSnapshot(dbRefs.assets, (snapshot) => {
+                    console.log('Assets updated:', snapshot.docs.length);
                     assets = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                     updateUI();
                 });
                 onSnapshot(dbRefs.notes, (snapshot) => {
+                    console.log('Notes updated:', snapshot.docs.length);
                     notes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                     updateUI();
                 });
