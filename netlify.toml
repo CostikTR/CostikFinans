@@ -1,0 +1,12 @@
+# Netlify configuration for Next.js 15 PWA
+[build]
+  command = "pnpm install && pnpm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "20.18.0"
+  PNPM_VERSION = "10.18.2"
+  
+# Next.js Essential Plugin
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
