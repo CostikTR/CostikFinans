@@ -13,6 +13,7 @@ const staticDir = path.join(process.cwd(), '.next/static');
 const pwaFiles = [
   'sw.js',
   'sw-enhanced.js',
+  'firebase-messaging-sw.js',
   'manifest.json',
   'browserconfig.xml',
 ];
