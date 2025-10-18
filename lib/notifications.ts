@@ -247,6 +247,80 @@ export class NotificationManager {
     }
   }
 
+  // Push notification gönder (FCM ile)
+  async sendPushNotification(
+    notification: NotificationItem,
+    userId?: string
+  ): Promise<boolean> {
+    try {
+      // FCM token'ları al (Firestore'dan)
+      const tokens = await this.getUserFCMTokens(userId)
+      
+      if (!tokens || tokens.length === 0) {
+        console.log('[Push] No FCM tokens found for user')
+        return false
+      }
+
+      // API'ye istek gönder
+      const response = await fetch('/api/notifications/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          tokens,
+          title: notification.title,
+          body: notification.message,
+          data: {
+            ...notification.data,
+            notificationId: notification.id,
+            type: notification.type,
+            priority: notification.priority
+          },
+          notificationType: notification.type
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error(`Push notification API error: ${response.statusText}`)
+      }
+
+      console.log('[Push] Push notification sent successfully')
+      return true
+
+    } catch (error) {
+      console.error('[Push] Error sending push notification:', error)
+      return false
+    }
+  }
+
+  // Kullanıcının FCM token'larını al
+  private async getUserFCMTokens(userId?: string): Promise<string[]> {
+    if (!userId) return []
+
+    try {
+      // Firestore'dan token'ları al
+      const { collection, getDocs } = await import('firebase/firestore')
+      const { db } = await import('@/lib/firebase')
+      
+      if (!db) return []
+
+      const tokensRef = collection(db, 'users', userId, 'fcmTokens')
+      const tokensSnapshot = await getDocs(tokensRef)
+      
+      const tokens: string[] = []
+      tokensSnapshot.forEach((doc) => {
+        tokens.push(doc.data().token)
+      })
+
+      return tokens
+
+    } catch (error) {
+      console.error('[Push] Error fetching FCM tokens:', error)
+      return []
+    }
+  }
+
   private handleNotificationClick(notification: NotificationItem): void {
     // Bildirim tipine göre yönlendirme
     switch (notification.type) {
@@ -334,6 +408,14 @@ export class NotificationManager {
     // Hemen gönderilecekse browser notification gönder
     if (!scheduledFor || scheduledFor <= new Date()) {
       this.sendBrowserNotification(notification)
+      
+      // Push notification da gönder (eğer kullanıcı varsa)
+      if (typeof window !== 'undefined') {
+        const auth = (window as any).__FIREBASE_AUTH__
+        if (auth?.currentUser) {
+          this.sendPushNotification(notification, auth.currentUser.uid)
+        }
+      }
     }
 
     return notification
@@ -609,6 +691,7 @@ export const useNotifications = () => {
   // Hook fonksiyonlarında e-posta desteği ekle
   createNotificationWithEmail: manager.createNotificationWithEmail.bind(manager),
   sendEmailNotification: manager.sendEmailNotification.bind(manager),
+  sendPushNotification: manager.sendPushNotification.bind(manager),
     getNotifications: manager.getStoredNotifications.bind(manager),
     markAsRead: manager.markAsRead.bind(manager),
     markAllAsRead: manager.markAllAsRead.bind(manager),

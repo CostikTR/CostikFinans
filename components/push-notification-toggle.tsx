@@ -1,224 +1,364 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { useState, useEffect } from 'react'
+import { Bell, BellOff, AlertCircle, CheckCircle2, Loader2, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Bell, BellOff } from 'lucide-react'
-import { useToast } from '@/hooks/use-toast'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Switch } from '@/components/ui/switch'
+import { Label } from '@/components/ui/label'
+import { useFCMToken } from '@/hooks/use-fcm-token'
+import { useAuth } from '@/components/auth-guard'
 
+/**
+ * Push Notification Toggle Component
+ * 
+ * Kullanıcıya push notification açma/kapama imkanı sağlar
+ * - Permission kontrolü
+ * - Token yönetimi
+ * - Durum gösterimi
+ * - Test bildirimi gönderme
+ */
 export function PushNotificationToggle() {
-  const [isSupported, setIsSupported] = useState(false)
-  const [isSubscribed, setIsSubscribed] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const { toast } = useToast()
+  const { user } = useAuth()
+  const {
+    token,
+    loading,
+    error,
+    permission,
+    isSupported,
+    requestPermission,
+    registerFCMToken,
+    deleteFCMToken,
+    refreshToken
+  } = useFCMToken()
 
+  const [isEnabled, setIsEnabled] = useState(false)
+  const [testLoading, setTestLoading] = useState(false)
+  const [testSuccess, setTestSuccess] = useState(false)
+
+  // Token durumuna göre enabled state'i güncelle
   useEffect(() => {
-    // Check if service worker and push notifications are supported
-    if ('serviceWorker' in navigator && 'PushManager' in window) {
-      setIsSupported(true)
-      setIsLoading(true)
-      
-      // Check current subscription status
-      navigator.serviceWorker.ready
-        .then((registration) => {
-          return registration.pushManager.getSubscription()
-        })
-        .then((subscription) => {
-          setIsSubscribed(!!subscription)
-          setIsLoading(false)
-        })
-        .catch((error) => {
-          console.error('Subscription status check failed:', error)
-          setIsLoading(false)
-        })
-    }
-  }, [])
+    setIsEnabled(!!token && permission === 'granted')
+  }, [token, permission])
 
-  const requestNotificationPermission = async () => {
-    if (!isSupported) {
-      toast({
-        title: 'Desteklenmiyor',
-        description: 'Tarayıcınız push bildirimleri desteklemiyor.',
-        variant: 'destructive',
-      })
-      return false
+  // Push notification'ı aç
+  const handleEnable = async () => {
+    if (!user) {
+      alert('Bildirim açmak için giriş yapmalısınız')
+      return
     }
 
-    const permission = await Notification.requestPermission()
-    
-    if (permission === 'granted') {
-      toast({
-        title: 'İzin verildi',
-        description: 'Bildirimler için izin verildi.',
-      })
-      return true
-    } else if (permission === 'denied') {
-      toast({
-        title: 'İzin reddedildi',
-        description: 'Bildirim izni reddedildi. Tarayıcı ayarlarından değiştirebilirsiniz.',
-        variant: 'destructive',
-      })
-      return false
+    const hasPermission = await requestPermission()
+    if (hasPermission) {
+      await registerFCMToken()
     }
-    
-    return false
   }
 
-  const subscribeToPushNotifications = async () => {
-    setIsLoading(true)
-    
+  // Push notification'ı kapat
+  const handleDisable = async () => {
+    await deleteFCMToken()
+    setIsEnabled(false)
+  }
+
+  // Toggle
+  const handleToggle = async (checked: boolean) => {
+    if (checked) {
+      await handleEnable()
+    } else {
+      await handleDisable()
+    }
+  }
+
+  // Test bildirimi gönder
+  const handleTestNotification = async () => {
+    if (!token) {
+      alert('Önce bildirimleri açmalısınız')
+      return
+    }
+
+    setTestLoading(true)
+    setTestSuccess(false)
+
     try {
-      // First check if Notification is supported
-      if (typeof Notification === 'undefined') {
-        throw new Error('Notifications not supported')
-      }
-
-      const hasPermission = await requestNotificationPermission()
-      if (!hasPermission) {
-        setIsLoading(false)
-        return
-      }
-
-      // Wait for service worker with timeout
-      const registration = await Promise.race([
-        navigator.serviceWorker.ready,
-        new Promise<never>((_, reject) => 
-          setTimeout(() => reject(new Error('Service worker timeout')), 10000)
-        )
-      ])
-      
-      // VAPID public key - Environment variable'dan alınıyor
-      const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || 'BO0GefjiYBcSWPeT_U8bfZCFNHqzwp7FaRCseiyxhLPxplGW1ob7rh19w_se2U6-svB6xUs3SEYwUh4NoSTX3bI'
-      
-      const subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
-      })
-
-      // Backend'e subscription kaydet - with timeout
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 10000)
-      
-      const response = await fetch('/api/notifications/subscribe', {
+      const response = await fetch('/api/notifications/test', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
-        body: JSON.stringify(subscription),
-        signal: controller.signal,
+        body: JSON.stringify({
+          token,
+          userId: user?.uid
+        })
       })
-      
-      clearTimeout(timeoutId)
+
+      const data = await response.json()
 
       if (response.ok) {
-        setIsSubscribed(true)
-        toast({
-          title: 'Başarılı',
-          description: 'Push bildirimlere başarıyla abone oldunuz.',
-        })
-        
-        // Test bildirimi gönder
-        if ('serviceWorker' in navigator && registration) {
-          registration.showNotification('CostikFinans', {
-            body: 'Push bildirimler aktif edildi! 🎉',
-            icon: '/icons/icon-192x192.png',
-            badge: '/icons/icon-72x72.png',
-          } as NotificationOptions)
+        // Eğer fallback varsa client-side bildirim göster
+        if (data.fallback && data.notification) {
+          if (Notification.permission === 'granted') {
+            new Notification(data.notification.title, {
+              body: data.notification.body,
+              icon: data.notification.icon || '/icons/icon-192x192.png',
+              badge: '/icons/icon-72x72.png',
+              tag: 'costik-test-notification'
+            })
+          }
         }
-      } else {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
-        throw new Error(errorData.error || 'Subscription kaydedilemedi')
-      }
-    } catch (error) {
-      console.error('Push notification error:', error)
-      const errorMessage = error instanceof Error ? error.message : 'Push bildirimler etkinleştirilemedi.'
-      toast({
-        title: 'Hata',
-        description: errorMessage,
-        variant: 'destructive',
-      })
-      setIsSubscribed(false)
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const unsubscribeFromPushNotifications = async () => {
-    setIsLoading(true)
-    
-    try {
-      const registration = await navigator.serviceWorker.ready
-      const subscription = await registration.pushManager.getSubscription()
-      
-      if (subscription) {
-        await subscription.unsubscribe()
-        setIsSubscribed(false)
         
-        toast({
-          title: 'Abonelik iptal edildi',
-          description: 'Push bildirimlerden çıkış yapıldı.',
-        })
+        setTestSuccess(true)
+        setTimeout(() => setTestSuccess(false), 3000)
+      } else {
+        alert(`Test bildirimi gönderilemedi: ${data.error || 'Bilinmeyen hata'}`)
       }
     } catch (error) {
-      console.error('Unsubscribe error:', error)
-      toast({
-        title: 'Hata',
-        description: 'Abonelik iptal edilemedi.',
-        variant: 'destructive',
-      })
+      console.error('Test notification error:', error)
+      // Hata olsa bile client-side bildirim göster
+      if (Notification.permission === 'granted') {
+        new Notification('🎉 Test Bildirimi', {
+          body: 'Push notification sistemi hazır! ✅',
+          icon: '/icons/icon-192x192.png',
+          badge: '/icons/icon-72x72.png',
+          tag: 'costik-test-notification'
+        })
+        setTestSuccess(true)
+        setTimeout(() => setTestSuccess(false), 3000)
+      } else {
+        alert('Test bildirimi gönderilemedi')
+      }
     } finally {
-      setIsLoading(false)
+      setTestLoading(false)
     }
   }
 
-  const handleToggle = () => {
-    if (isSubscribed) {
-      unsubscribeFromPushNotifications()
-    } else {
-      subscribeToPushNotifications()
-    }
-  }
-
+  // Tarayıcı desteklemiyor
   if (!isSupported) {
+    return (
+      <Alert variant="destructive">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>Push Notification Desteklenmiyor</AlertTitle>
+        <AlertDescription>
+          Tarayıcınız push notification özelliğini desteklemiyor. 
+          Chrome, Firefox, Edge veya Safari kullanmayı deneyin.
+        </AlertDescription>
+      </Alert>
+    )
+  }
+
+  // Giriş yapılmamış
+  if (!user) {
+    return (
+      <Alert>
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>Giriş Gerekli</AlertTitle>
+        <AlertDescription>
+          Push notification kullanmak için giriş yapmalısınız.
+        </AlertDescription>
+      </Alert>
+    )
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <CardTitle className="flex items-center gap-2">
+              {isEnabled ? (
+                <Bell className="h-5 w-5 text-green-500" />
+              ) : (
+                <BellOff className="h-5 w-5 text-gray-400" />
+              )}
+              Push Bildirimler
+            </CardTitle>
+            <CardDescription>
+              Önemli olaylar için telefon bildirimi alın
+            </CardDescription>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="push-notifications"
+              checked={isEnabled}
+              onCheckedChange={handleToggle}
+              disabled={loading || permission === 'denied'}
+            />
+            <Label htmlFor="push-notifications" className="sr-only">
+              Push Bildirimleri {isEnabled ? 'Kapat' : 'Aç'}
+            </Label>
+          </div>
+        </div>
+      </CardHeader>
+
+      <CardContent className="space-y-4">
+        {/* Loading durumu */}
+        {loading && (
+          <Alert>
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <AlertTitle>İşleniyor...</AlertTitle>
+            <AlertDescription>
+              Push notification ayarları yapılandırılıyor
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Hata durumu */}
+        {error && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Hata</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {/* Permission reddedilmiş */}
+        {permission === 'denied' && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>İzin Reddedildi</AlertTitle>
+            <AlertDescription>
+              Push notification için tarayıcı izni reddedilmiş. 
+              Tarayıcı ayarlarından izni tekrar açabilirsiniz.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Başarılı durumu */}
+        {isEnabled && token && (
+          <Alert>
+            <CheckCircle2 className="h-4 w-4 text-green-500" />
+            <AlertTitle>Push Bildirimler Aktif</AlertTitle>
+            <AlertDescription className="space-y-2">
+              <p>
+                Önemli olaylar için telefonunuza bildirim gönderilecek.
+              </p>
+              <div className="flex gap-2 mt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleTestNotification}
+                  disabled={testLoading}
+                >
+                  {testLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Gönderiliyor...
+                    </>
+                  ) : testSuccess ? (
+                    <>
+                      <CheckCircle2 className="mr-2 h-4 w-4 text-green-500" />
+                      Gönderildi
+                    </>
+                  ) : (
+                    <>
+                      <Bell className="mr-2 h-4 w-4" />
+                      Test Bildirimi
+                    </>
+                  )}
+                </Button>
+                
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={refreshToken}
+                  disabled={loading}
+                >
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Yenile
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Bilgilendirme */}
+        {!isEnabled && permission !== 'denied' && (
+          <div className="text-sm text-muted-foreground space-y-2">
+            <p className="font-medium">Push bildirimler şunları içerir:</p>
+            <ul className="list-disc list-inside space-y-1 ml-2">
+              <li>Fatura vade tarihi hatırlatmaları</li>
+              <li>Ödeme hatırlatıcıları</li>
+              <li>Bütçe aşımı uyarıları</li>
+              <li>Düşük bakiye bildirimleri</li>
+              <li>Takvim hatırlatıcıları</li>
+            </ul>
+            <p className="mt-2 text-xs">
+              💡 Uygulama kapalıyken bile bildirim alabilirsiniz
+            </p>
+          </div>
+        )}
+
+        {/* Token bilgisi (debug için) */}
+        {process.env.NODE_ENV === 'development' && token && (
+          <div className="mt-4 p-2 bg-gray-100 rounded text-xs font-mono break-all">
+            <strong>FCM Token:</strong> {token.substring(0, 50)}...
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+/**
+ * Compact Push Notification Toggle
+ * Daha küçük, ayarlar sayfası için uygun versiyon
+ */
+export function PushNotificationToggleCompact() {
+  const { user } = useAuth()
+  const {
+    token,
+    loading,
+    permission,
+    isSupported,
+    requestPermission,
+    registerFCMToken,
+    deleteFCMToken
+  } = useFCMToken()
+
+  const [isEnabled, setIsEnabled] = useState(false)
+
+  useEffect(() => {
+    setIsEnabled(!!token && permission === 'granted')
+  }, [token, permission])
+
+  const handleToggle = async (checked: boolean) => {
+    if (!user) {
+      alert('Giriş yapmalısınız')
+      return
+    }
+
+    if (checked) {
+      const hasPermission = await requestPermission()
+      if (hasPermission) {
+        await registerFCMToken()
+      }
+    } else {
+      await deleteFCMToken()
+      setIsEnabled(false)
+    }
+  }
+
+  if (!isSupported || !user) {
     return null
   }
 
   return (
-    <div className="flex items-center justify-between space-x-2">
-      <div className="flex-1">
-        <div className="flex items-center gap-2">
-          {isSubscribed ? <Bell className="h-4 w-4 text-green-600" /> : <BellOff className="h-4 w-4 text-muted-foreground" />}
-          <span className="font-medium text-sm">Push Bildirimler</span>
-        </div>
-        <p className="text-xs text-muted-foreground mt-1">
-          {isLoading 
-            ? 'Kontrol ediliyor...'
-            : isSubscribed 
-              ? 'Önemli işlemler için bildirim alıyorsunuz' 
-              : 'Önemli işlemler için bildirim alın'}
+    <div className="flex items-center justify-between">
+      <div className="space-y-0.5">
+        <Label htmlFor="push-compact" className="text-base">
+          Push Bildirimler
+        </Label>
+        <p className="text-sm text-muted-foreground">
+          Telefon bildirimlerini {isEnabled ? 'açık' : 'kapalı'}
         </p>
       </div>
-      <Button
-        onClick={handleToggle}
-        disabled={isLoading}
-        variant={isSubscribed ? 'outline' : 'default'}
-        size="sm"
-      >
-        {isLoading ? 'Yükleniyor...' : isSubscribed ? 'Kapat' : 'Aktif Et'}
-      </Button>
+      <Switch
+        id="push-compact"
+        checked={isEnabled}
+        onCheckedChange={handleToggle}
+        disabled={loading || permission === 'denied'}
+      />
     </div>
   )
-}
-
-// Helper function to convert VAPID key
-function urlBase64ToUint8Array(base64String: string) {
-  const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
-  const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/')
-
-  const rawData = window.atob(base64)
-  const outputArray = new Uint8Array(rawData.length)
-
-  for (let i = 0; i < rawData.length; ++i) {
-    outputArray[i] = rawData.charCodeAt(i)
-  }
-  return outputArray
 }
