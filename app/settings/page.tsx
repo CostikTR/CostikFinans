@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { AuthGuard } from "@/components/auth-guard"
-import { PushNotificationToggle } from "@/components/push-notification-toggle"
+import { PushNotificationToggleCompact } from "@/components/push-notification-toggle"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Separator } from "@/components/ui/separator"
@@ -31,7 +31,7 @@ export default function SettingsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <PushNotificationToggle />
+            <PushNotificationToggleCompact />
             
             <Separator />
             

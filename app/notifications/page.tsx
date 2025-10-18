@@ -12,7 +12,6 @@ import { listNotifications, watchNotifications, markNotificationRead, clearNotif
 import { AuthGuard } from "@/components/auth-guard"
 import Link from "next/link"
 import { safeJsonParse } from "@/lib/utils"
-import { PushNotificationToggle } from "@/components/push-notification-toggle"
 
 export default function NotificationsPage() {
   const [items, setItems] = useState<Notification[]>([])
@@ -72,11 +71,6 @@ export default function NotificationsPage() {
           </Button>
           <Button variant="destructive" onClick={clearAll} disabled={!items.length}>Tümünü temizle</Button>
         </div>
-      </div>
-
-      {/* Push Notification Toggle Card */}
-      <div className="mb-6">
-        <PushNotificationToggle />
       </div>
 
       <Card>
