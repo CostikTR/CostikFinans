@@ -19,7 +19,7 @@
 
 export const VAPID_PUBLIC_KEY = 
   process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY || 
-  '' // Buraya Firebase Console'dan aldığınız VAPID key'i yapıştırın
+  'BFJ6F-ojC6DQX7k-nWHKSE1bdmQ1PAp6093hZXcSzHqREcculZPgUxyH7GZ9xC2hrhkFspYrljEFG4_DFKxnhOM'
 
 /**
  * FCM yapılandırma kontrolü

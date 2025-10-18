@@ -2,14 +2,19 @@ import { NextRequest, NextResponse } from 'next/server'
 import webpush from 'web-push'
 import { auth } from '@/lib/firebase'
 
-// VAPID ayarları
-const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!
-const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY!
+// VAPID ayarları (Firebase Cloud Messaging)
+const vapidPublicKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY!
+const vapidPrivateKey = process.env.FIREBASE_VAPID_PRIVATE_KEY!
 const vapidEmail = process.env.VAPID_EMAIL || 'mailto:admin@costikfinans.site'
 
 // VAPID detaylarını ayarla
 if (vapidPublicKey && vapidPrivateKey) {
-  webpush.setVapidDetails(vapidEmail, vapidPublicKey, vapidPrivateKey)
+  try {
+    webpush.setVapidDetails(vapidEmail, vapidPublicKey, vapidPrivateKey)
+    console.log('[Push Subscribe] VAPID configured successfully')
+  } catch (error) {
+    console.error('[Push Subscribe] VAPID configuration error:', error)
+  }
 }
 
 // Subscription storage (production'da veritabanı kullanılmalı)
