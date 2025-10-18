@@ -9,6 +9,7 @@ import { Separator } from "@/components/ui/separator"
 import { useToast } from "@/hooks/use-toast"
 import { Bell, Mail, MessageSquare, Calendar, TrendingUp, AlertTriangle, Save } from "lucide-react"
 import { useNotifications } from '@/lib/notifications'
+import { PushNotificationToggleCompact } from "@/components/push-notification-toggle"
 
 export function NotificationSettings() {
   const { toast } = useToast()
@@ -149,6 +150,13 @@ export function NotificationSettings() {
                 onCheckedChange={(checked) => updateSetting('enabled', checked)}
               />
             </div>
+
+            <Separator />
+
+            {/* Push Notification Toggle */}
+            <PushNotificationToggleCompact />
+
+            <Separator />
 
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
