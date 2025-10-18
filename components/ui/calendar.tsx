@@ -11,7 +11,8 @@ import {
   ReceiptText,
   Hourglass,
 } from "lucide-react"
-import * as RDP from "react-day-picker"
+import { DayPicker } from "react-day-picker"
+import type { DayPickerProps } from "react-day-picker"
 
 import { cn } from "@/lib/utils"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
@@ -20,11 +21,6 @@ import { Button } from "@/components/ui/button"
 const MarkersContext = React.createContext<Record<string, string[]> | null>(null)
 type EventItem = { type: string; description?: string }
 const EventsContext = React.createContext<Record<string, EventItem[]> | null>(null)
-
-// Extract components safely from RDP namespace to be resilient across versions
-const DayPicker: any = (RDP as any).DayPicker || (RDP as any).default || (RDP as any)
-const DayButton: any = (RDP as any).DayButton || (RDP as any).Day || (RDP as any)
-type DayPickerProps = RDP.DayPickerProps
 
 function Calendar({
   showOutsideDays = true,

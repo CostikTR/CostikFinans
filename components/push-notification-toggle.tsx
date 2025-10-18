@@ -339,8 +339,24 @@ export function PushNotificationToggleCompact() {
     }
   }
 
-  if (!isSupported || !user) {
-    return null
+  if (!user) {
+    return null // Giriş yapmamışsa gösterme
+  }
+
+  if (!isSupported) {
+    return (
+      <div className="flex items-center justify-between">
+        <div className="space-y-0.5">
+          <Label className="text-base text-muted-foreground">
+            Push Bildirimler
+          </Label>
+          <p className="text-sm text-muted-foreground">
+            Tarayıcınız push bildirimlerini desteklemiyor
+          </p>
+        </div>
+        <Switch disabled checked={false} />
+      </div>
+    )
   }
 
   return (
