@@ -651,8 +651,15 @@ export default function FinanceDashboard() {
       .filter((t) => t.type === "gider" && t.category !== "Eşitleme" && t.category !== "Devreden")
       .reduce((acc, t) => acc + t.amount, 0)
 
-  // Kümülatif bakiye hesaplama - Tüm işlemleri dahil et (önceki aylardan devredenler de)
-  const totalBalance = transactions.reduce((acc, t) => acc + (t.type === "gelir" ? t.amount : -t.amount), 0)
+  // Kümülatif bakiye hesaplama - Sadece bugüne kadar olan işlemleri dahil et
+  const todayEnd = new Date()
+  todayEnd.setHours(23, 59, 59, 999) // Bugünü dahil etmek için günün sonuna set et
+  const totalBalance = transactions
+    .filter(t => {
+      const txDate = new Date(t.date)
+      return txDate <= todayEnd
+    })
+    .reduce((acc, t) => acc + (t.type === "gelir" ? t.amount : -t.amount), 0)
   
   // Sadece bu dönem işlemleri
   const periodBalance = periodTransactions.reduce((acc, t) => acc + (t.type === "gelir" ? t.amount : -t.amount), 0)

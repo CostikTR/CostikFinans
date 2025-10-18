@@ -1062,11 +1062,10 @@ export default function CardsPage() {
                                     <p className="text-sm text-muted-foreground">Sonraki Ödeme</p>
                                     <p className="text-lg font-semibold mt-1">
                                       {p.nextDate ? 
-                                        new Date(p.nextDate).toLocaleDateString("tr-TR", { 
-                                          day: 'numeric', 
-                                          month: 'short', 
-                                          year: 'numeric' 
-                                        }) : 
+                                        (() => {
+                                          const d = new Date(p.nextDate)
+                                          return `${d.getDate()} ${d.toLocaleDateString("tr-TR", { month: 'short' })}`
+                                        })() : 
                                         isCompleted ? 'Tamamlandı' : '-'
                                       }
                                     </p>
