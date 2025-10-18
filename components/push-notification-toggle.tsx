@@ -319,22 +319,42 @@ export function PushNotificationToggleCompact() {
   const [isEnabled, setIsEnabled] = useState(false)
 
   useEffect(() => {
-    setIsEnabled(!!token && permission === 'granted')
+    const shouldEnable = !!token && permission === 'granted'
+    console.log('[PushToggleCompact] State update:', { token: !!token, permission, shouldEnable })
+    setIsEnabled(shouldEnable)
   }, [token, permission])
 
   const handleToggle = async (checked: boolean) => {
+    console.log('[PushToggleCompact] Toggle clicked:', { checked, user: !!user })
+    
     if (!user) {
       alert('Giriş yapmalısınız')
       return
     }
 
-    if (checked) {
-      const hasPermission = await requestPermission()
-      if (hasPermission) {
-        await registerFCMToken()
+    try {
+      if (checked) {
+        console.log('[PushToggleCompact] Requesting permission...')
+        const hasPermission = await requestPermission()
+        console.log('[PushToggleCompact] Permission result:', hasPermission)
+        
+        if (hasPermission) {
+          console.log('[PushToggleCompact] Registering FCM token...')
+          const result = await registerFCMToken()
+          console.log('[PushToggleCompact] Registration result:', result)
+          
+          // Token kaydı başarılıysa state'i güncelle
+          if (result) {
+            setIsEnabled(true)
+          }
+        }
+      } else {
+        console.log('[PushToggleCompact] Deleting FCM token...')
+        await deleteFCMToken()
+        setIsEnabled(false)
       }
-    } else {
-      await deleteFCMToken()
+    } catch (error) {
+      console.error('[PushToggleCompact] Error:', error)
       setIsEnabled(false)
     }
   }
