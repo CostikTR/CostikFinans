@@ -32,6 +32,7 @@ import ClientHeaderGate from "@/app/route-header-gate"
 import { CalendarFloat } from "@/components/calendar-float"
 import { MobileBottomNav } from "@/components/mobile-bottom-nav"
 import { PWAInstall } from "@/components/pwa-install"
+import { PWADebugPanel } from "@/components/pwa-debug-panel"
 import { Analytics } from '@vercel/analytics/react'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 
@@ -61,6 +62,9 @@ export default function RootLayout({
           
           {/* PWA Install Prompt */}
           <PWAInstall />
+          
+          {/* PWA Debug Panel - CTRL+SHIFT+P */}
+          <PWADebugPanel />
         </Providers>
         
         {/* Vercel Analytics & Speed Insights */}

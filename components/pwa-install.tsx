@@ -40,6 +40,9 @@ export function PWAInstall() {
     const isAndroid = /android/.test(userAgent)
     const isDesktop = !isIOS && !isAndroid
 
+    console.log('[PWA Install] User Agent:', userAgent)
+    console.log('[PWA Install] Device Detection:', { isIOS, isAndroid, isDesktop })
+
     if (isIOS) {
       setDeviceType('ios')
     } else if (isAndroid) {
@@ -52,7 +55,10 @@ export function PWAInstall() {
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches
     const isIOSStandalone = (window.navigator as any).standalone === true
     
+    console.log('[PWA Install] Standalone Check:', { isStandalone, isIOSStandalone })
+    
     if (isStandalone || isIOSStandalone) {
+      console.log('[PWA Install] Already installed, hiding button')
       setIsInstalled(true)
       return
     }
@@ -60,6 +66,7 @@ export function PWAInstall() {
     // Android/Desktop için beforeinstallprompt event'ini dinle
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault()
+      console.log('[PWA Install] beforeinstallprompt event triggered')
       setInstallPrompt(e as BeforeInstallPromptEvent)
       setShowInstallButton(true)
     }
@@ -68,15 +75,38 @@ export function PWAInstall() {
 
     // iOS için - beforeinstallprompt desteklenmiyor, manuel göster
     if (isIOS && !isIOSStandalone) {
-      // iOS'ta önceden yüklenmemişse butonu göster
-      const hasSeenIOSPrompt = localStorage.getItem('ios-install-prompt-seen')
-      if (!hasSeenIOSPrompt) {
+      // iOS'ta dismiss edilmemişse butonu göster
+      const isDismissed = localStorage.getItem('pwa-install-dismissed')
+      console.log('[PWA Install] iOS dismissed status:', isDismissed)
+      if (!isDismissed) {
+        console.log('[PWA Install] Showing install button for iOS')
         setShowInstallButton(true)
+      }
+    }
+
+    // Android için - beforeinstallprompt gelmezse manuel göster
+    if (isAndroid && !isStandalone) {
+      // Android için timeout ile kontrol - eğer 3 saniye içinde event gelmezse manuel göster
+      const androidTimeout = setTimeout(() => {
+        if (!installPrompt) {
+          const isDismissed = localStorage.getItem('pwa-install-dismissed')
+          console.log('[PWA Install] Android - No beforeinstallprompt after 3s, showing manual button. Dismissed:', isDismissed)
+          if (!isDismissed) {
+            console.log('[PWA Install] Showing manual install button for Android')
+            setShowInstallButton(true)
+          }
+        }
+      }, 3000)
+
+      return () => {
+        clearTimeout(androidTimeout)
+        window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
       }
     }
 
     // appinstalled event'ini dinle
     const handleAppInstalled = () => {
+      console.log('[PWA Install] appinstalled event triggered')
       setIsInstalled(true)
       setShowInstallButton(false)
       localStorage.setItem('pwa-installed', 'true')
@@ -94,7 +124,6 @@ export function PWAInstall() {
     if (deviceType === 'ios') {
       // iOS için talimatları göster
       setShowIOSInstructions(true)
-      localStorage.setItem('ios-install-prompt-seen', 'true')
     } else if (deviceType === 'android' && !installPrompt) {
       // Android'de prompt yoksa talimatları göster
       setShowAndroidInstructions(true)
@@ -127,20 +156,33 @@ export function PWAInstall() {
   }
 
   // Zaten yüklüyse veya dismiss edildiyse gösterme
-  if (isInstalled || !showInstallButton) {
+  console.log('[PWA Install] Render check:', { isInstalled, showInstallButton })
+  
+  if (isInstalled) {
+    console.log('[PWA Install] Not rendering - already installed')
+    return null
+  }
+  
+  if (!showInstallButton) {
+    console.log('[PWA Install] Not rendering - button not shown')
     return null
   }
 
   // Dismiss edilmiş mi kontrol et
   const isDismissed = localStorage.getItem('pwa-install-dismissed')
+  console.log('[PWA Install] Dismissed check:', isDismissed)
+  
   if (isDismissed) {
+    console.log('[PWA Install] Not rendering - dismissed by user')
     return null
   }
+
+  console.log('[PWA Install] Rendering button!', { deviceType })
 
   return (
     <>
       {/* Kurulum Butonu - Sağ alt köşede floating */}
-      <div className="fixed bottom-20 right-4 z-50 sm:bottom-6">
+      <div className="fixed bottom-20 right-4 z-[100] sm:bottom-6">
         <Button
           onClick={handleInstallClick}
           size="lg"
