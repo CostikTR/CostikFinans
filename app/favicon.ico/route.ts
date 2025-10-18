@@ -15,8 +15,8 @@ export async function GET() {
     const p = path.join(process.cwd(), 'public', rel)
     try {
       const buf = await fs.readFile(p)
-      // Convert Node Buffer to ArrayBuffer slice for Web Response
-      const ab = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength)
+      // Convert Node Buffer to proper ArrayBuffer for Web Response
+      const ab = new Uint8Array(buf).buffer
       return new NextResponse(ab, {
         headers: {
           // Many browsers accept PNG even for /favicon.ico
