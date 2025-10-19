@@ -1433,7 +1433,9 @@ export default function CardsPage() {
                           ) : (
                             <>
                               <p className="font-medium truncate">{e.description || "-"}</p>
-                              <p className="text-xs text-muted-foreground">{e.date}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {e.date ? new Date(e.date).getDate() : '-'}
+                              </p>
                             </>
                           )}
                         </div>
