@@ -135,9 +135,17 @@ export default function AppHeader() {
         const raw = storage.getItem("transactions")
         const txns: Transaction[] = safeJsonParse(raw, [])
         setTransactions(txns)
-        // Kümülatif bakiye hesaplama - Tüm işlemler dahil
-        const totalBalance = txns.reduce((acc, t) => acc + (t.type === "gelir" ? t.amount : -t.amount), 0)
+        // Kümülatif bakiye hesaplama - Sadece bugüne kadar olan işlemleri dahil et (Ana sayfa ile aynı)
+        const todayEnd = new Date()
+        todayEnd.setHours(23, 59, 59, 999)
+        const totalBalance = txns
+          .filter(t => {
+            const txDate = new Date(t.date)
+            return txDate <= todayEnd
+          })
+          .reduce((acc, t) => acc + (t.type === "gelir" ? t.amount : -t.amount), 0)
         setTotalBalance(totalBalance)
+        console.log('[Header] Balance calculated (localStorage):', { total: txns.length, filtered: txns.filter(t => new Date(t.date) <= todayEnd).length, balance: totalBalance })
       } catch {}
     }
     window.addEventListener("transactions:changed", handler)
@@ -160,9 +168,17 @@ export default function AppHeader() {
   // Recompute cumulative balance whenever transactions change
   useEffect(() => {
     const txns = transactions || []
-    // Kümülatif bakiye hesaplama - Tüm işlemler dahil
-    const totalBalance = txns.reduce((acc, t) => acc + (t.type === "gelir" ? t.amount : -t.amount), 0)
+    // Kümülatif bakiye hesaplama - Sadece bugüne kadar olan işlemleri dahil et (Ana sayfa ile aynı)
+    const todayEnd = new Date()
+    todayEnd.setHours(23, 59, 59, 999)
+    const totalBalance = txns
+      .filter(t => {
+        const txDate = new Date(t.date)
+        return txDate <= todayEnd
+      })
+      .reduce((acc, t) => acc + (t.type === "gelir" ? t.amount : -t.amount), 0)
     setTotalBalance(totalBalance)
+    console.log('[Header] Balance calculated:', { total: txns.length, filtered: txns.filter(t => new Date(t.date) <= todayEnd).length, balance: totalBalance })
   }, [transactions])
 
   const openGlobalCalendar = () => {
