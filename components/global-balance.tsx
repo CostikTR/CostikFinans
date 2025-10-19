@@ -57,11 +57,27 @@ export function GlobalBalance() {
   }, [])
 
   // Compute period-based balance (aligns with dashboard)
-  // Kümülatif bakiye hesaplama - Tüm işlemleri dahil et
+  // Kümülatif bakiye hesaplama - Bugüne kadar olan tüm işlemleri dahil et
   const displayTotal = useMemo(() => {
     if (!Array.isArray(transactions)) return 0
-    // Tüm işlemlerin toplamı (kümülatif bakiye)
-    return transactions.reduce((sum, t) => (t.type === "gelir" ? sum + t.amount : sum - t.amount), 0)
+    
+    // Ana sayfa ile aynı mantık: Sadece bugüne kadar olan işlemler
+    const todayEnd = new Date()
+    todayEnd.setHours(23, 59, 59, 999)
+    
+    const total = transactions
+      .filter(t => {
+        const txDate = new Date(t.date)
+        return txDate <= todayEnd
+      })
+      .reduce((sum, t) => (t.type === "gelir" ? sum + t.amount : sum - t.amount), 0)
+    
+    console.log('[GlobalBalance] Total calculated:', { 
+      totalTransactions: transactions.length,
+      filteredTransactions: transactions.filter(t => new Date(t.date) <= todayEnd).length,
+      total 
+    })
+    return total
   }, [transactions])
 
   if (Number.isNaN(displayTotal)) return null
@@ -72,10 +88,16 @@ export function GlobalBalance() {
       const s = raw.trim().replace(/\s/g, "").replace(/\./g, "").replace(",", ".")
       return Number(s)
     }
-  const val = parseAmount(target)
+    const val = parseAmount(target)
     if (!isFinite(val)) return
-  const delta = val - displayTotal
+    
+    console.log('[GlobalBalance] Reconcile:', { currentBalance: displayTotal, targetBalance: val })
+    
+    const delta = val - displayTotal
     if (delta === 0) { setOpen(false); return }
+    
+    console.log('[GlobalBalance] Creating reconcile transaction:', { delta, type: delta > 0 ? 'gelir' : 'gider', amount: Math.abs(delta) })
+    
     const txn: Txn & { description: string; category: string } = {
       id: crypto.randomUUID(),
       type: delta > 0 ? "gelir" : "gider",
@@ -87,11 +109,13 @@ export function GlobalBalance() {
 
     const u = auth?.currentUser
     if (u?.uid && isFirestoreReady()) {
+      console.log('[GlobalBalance] Adding transaction to Firestore')
       await addTransaction(u.uid, txn as any)
       await addNotification(u.uid, { message: `${txn.description} • ${formatTRY(txn.amount)}`, type: "info", read: false, timestamp: Date.now() })
-  // Optimistic local update until snapshot arrives
-  setTransactions(prev => [txn as any, ...prev])
-  try { window.dispatchEvent(new Event("transactions:changed")) } catch {}
+      // Optimistic local update until snapshot arrives
+      setTransactions(prev => [txn as any, ...prev])
+      console.log('[GlobalBalance] Transaction added successfully')
+      try { window.dispatchEvent(new Event("transactions:changed")) } catch {}
     } else {
       try {
         const raw = localStorage.getItem("transactions")
