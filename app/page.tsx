@@ -283,15 +283,30 @@ export default function FinanceDashboard() {
     }
   }, [user])
 
-  // When logged out, listen for local changes (e.g., Eşitle from Global Balance)
+  // Listen for transaction changes from other components (e.g., GlobalBalance Eşitle)
   useEffect(() => {
     const handler = () => {
-      if (user?.uid) return
-      try {
-        const storage = safeLocalStorage()
-        const raw = storage.getItem("transactions")
-        if (raw) setTransactions(safeJsonParse(raw, []))
-      } catch {}
+      console.log('[Dashboard] transactions:changed event received, user:', user?.uid ? 'logged in' : 'guest')
+      if (user?.uid && isFirestoreReady()) {
+        // For logged-in users, reload from Firestore
+        import("@/lib/db").then(({ listTransactions }) => {
+          listTransactions(user.uid).then((list: any[]) => {
+            console.log('[Dashboard] Reloaded transactions from Firestore:', list.length)
+            setTransactions(list)
+          }).catch(() => {})
+        })
+      } else {
+        // For guests, reload from localStorage
+        try {
+          const storage = safeLocalStorage()
+          const raw = storage.getItem("transactions")
+          if (raw) {
+            const parsed = safeJsonParse(raw, [])
+            console.log('[Dashboard] Reloaded transactions from localStorage:', parsed.length)
+            setTransactions(parsed)
+          }
+        } catch {}
+      }
     }
     window.addEventListener("transactions:changed", handler)
     return () => window.removeEventListener("transactions:changed", handler)

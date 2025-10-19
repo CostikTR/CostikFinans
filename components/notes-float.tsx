@@ -70,23 +70,42 @@ export function NotesFloat({ open, onClose }: Props) {
       const unsub = watchNotes(userId, (list) => {
         const mapped = list.map((n) => ({ ...n, updatedAt: n.updatedAt || new Date().toISOString() }))
         setNotes(mapped)
+        
+        // Eğer aktif not listede varsa ve içeriği değiştiyse güncelle
+        if (activeId && !isSaving) {
+          const currentActiveNote = mapped.find(n => n.id === activeId)
+          if (currentActiveNote && editorRef.current) {
+            const currentHtml = editorRef.current.innerHTML
+            const newHtml = currentActiveNote.contentHtml || ""
+            // Sadece gerçekten değiştiyse ve kullanıcı yazmıyorsa güncelle
+            if (currentHtml !== newHtml && !hasUnsavedChanges) {
+              console.log('[NotesFloat] Updating active note from Firestore:', activeId)
+              editorRef.current.innerHTML = newHtml
+              setContent(newHtml)
+              setTitle(currentActiveNote.title)
+              setTags((currentActiveNote as any).tags?.join(", ") || "")
+            }
+          }
+        }
+        
+        // İlk not yoksa ilkini seç
         if (mapped.length && !activeId) {
           setActiveId(mapped[0].id)
           setTitle(mapped[0].title)
-      const html = mapped[0].contentHtml || ""
-      if (editorRef.current) editorRef.current.innerHTML = html
-      setContent(html)
-      setTags((mapped[0] as any).tags?.join(", ") || "")
+          const html = mapped[0].contentHtml || ""
+          if (editorRef.current) editorRef.current.innerHTML = html
+          setContent(html)
+          setTags((mapped[0] as any).tags?.join(", ") || "")
         }
       })
       listNotes(userId).then((list) => {
         if (list.length && !activeId) {
           setActiveId(list[0].id)
           setTitle(list[0].title)
-      const html = list[0].contentHtml || ""
-      if (editorRef.current) editorRef.current.innerHTML = html
-      setContent(html)
-      setTags((list[0] as any).tags?.join(", ") || "")
+          const html = list[0].contentHtml || ""
+          if (editorRef.current) editorRef.current.innerHTML = html
+          setContent(html)
+          setTags((list[0] as any).tags?.join(", ") || "")
         }
       })
       return () => { if (unsub) unsub() }
@@ -98,12 +117,12 @@ export function NotesFloat({ open, onClose }: Props) {
     if (arr.length && !activeId) {
       setActiveId(arr[0].id)
       setTitle(arr[0].title)
-    const html = arr[0].contentHtml || ""
-    if (editorRef.current) editorRef.current.innerHTML = html
-    setContent(html)
-    setTags((arr[0] as any).tags?.join(", ") || "")
+      const html = arr[0].contentHtml || ""
+      if (editorRef.current) editorRef.current.innerHTML = html
+      setContent(html)
+      setTags((arr[0] as any).tags?.join(", ") || "")
     }
-  }, [open, useFs])
+  }, [open, useFs, activeId, isSaving, hasUnsavedChanges])
 
   const active = useMemo(() => notes.find((n) => n.id === activeId) || null, [notes, activeId])
   const [lastActiveId, setLastActiveId] = useState<string>("")
@@ -411,8 +430,21 @@ export function NotesFloat({ open, onClose }: Props) {
     // Sadece gerçekten içerik değişmişse güncelle
     if (newContent !== content) {
       setContent(newContent)
+      setHasUnsavedChanges(true)
     }
   }
+
+  // Auto-save after content changes (debounced)
+  useEffect(() => {
+    if (!hasUnsavedChanges || !activeId || isSaving) return
+    
+    const timeoutId = setTimeout(() => {
+      console.log('[NotesFloat] Auto-saving note:', activeId)
+      save()
+    }, 2000) // 2 saniye sonra otomatik kaydet
+    
+    return () => clearTimeout(timeoutId)
+  }, [content, title, tags, hasUnsavedChanges, activeId, isSaving])
 
   // Mobile touch handler for better scrolling
   const handleTouchStart = (e: React.TouchEvent) => {

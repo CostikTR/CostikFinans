@@ -29,7 +29,7 @@ const schema = z.object({
   recur: z.boolean().optional(),
 })
 
-const INCOME_CATEGORIES = ["Maaş", "Serbest", "Yatırım", "Diğer"] as const
+const INCOME_CATEGORIES = ["Maaş", "Serbest", "Kira", "Yatırım", "Diğer"] as const
 const EXPENSE_CATEGORIES = ["Yemek", "Ulaşım", "Fatura", "Eğlence", "Sağlık", "Diğer"] as const
 
 export function AddTransactionDialog({

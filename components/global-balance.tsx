@@ -23,6 +23,7 @@ export function GlobalBalance() {
     const u = auth?.currentUser
     if (u?.uid && isFirestoreReady()) {
       unsub = watchTransactions(u.uid, (list: any[]) => {
+        console.log('[GlobalBalance] Firestore update received:', list.length, 'transactions')
         setTransactions(list as Txn[])
       }) as unknown as (() => void) | null | undefined
       listTransactions(u.uid).then((list: any[]) => setTransactions(list as Txn[])).catch(() => {})
@@ -53,7 +54,32 @@ export function GlobalBalance() {
       // Reset day defaults to 1 when logged out
       setResetDay(1)
     }
-    return () => { if (typeof unsub === "function") unsub() }
+    
+    // Listen for transaction changes event (for immediate UI updates)
+    const handleTransactionChange = () => {
+      console.log('[GlobalBalance] transactions:changed event received')
+      if (u?.uid && isFirestoreReady()) {
+        listTransactions(u.uid).then((list: any[]) => {
+          console.log('[GlobalBalance] Reloaded transactions:', list.length)
+          setTransactions(list as Txn[])
+        }).catch(() => {})
+      } else {
+        try {
+          const raw = localStorage.getItem("transactions")
+          const arr: Txn[] = safeJsonParse(raw, []) as any
+          setTransactions(arr)
+        } catch {
+          setTransactions([])
+        }
+      }
+    }
+    
+    window.addEventListener("transactions:changed", handleTransactionChange)
+    
+    return () => { 
+      if (typeof unsub === "function") unsub()
+      window.removeEventListener("transactions:changed", handleTransactionChange)
+    }
   }, [])
 
   // Compute period-based balance (aligns with dashboard)

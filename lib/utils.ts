@@ -63,7 +63,19 @@ export function formatTRY(value: number) {
 
 export function formatTRYCompact(value: number) {
   try {
-  return getCurrencyFormatter({ compact: true }).format(value)
+    const absValue = Math.abs(value)
+    const sign = value < 0 ? '-' : ''
+    
+    // Custom compact formatting for Turkish with proper suffixes
+    if (absValue >= 1_000_000_000) {
+      return `${sign}₺${(absValue / 1_000_000_000).toFixed(1)}Mn` // Milyar
+    } else if (absValue >= 1_000_000) {
+      return `${sign}₺${(absValue / 1_000_000).toFixed(1)}M` // Milyon
+    } else if (absValue >= 10_000) {
+      return `${sign}₺${(absValue / 1_000).toFixed(0)}k` // Bin
+    } else {
+      return getCurrencyFormatter({ compact: false }).format(value)
+    }
   } catch {
     return `₺${Math.round(value / 1000)}k`
   }
