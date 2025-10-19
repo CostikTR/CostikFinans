@@ -672,18 +672,35 @@ export default function FinanceDashboard() {
   // Kümülatif bakiye hesaplama - Sadece bugüne kadar olan işlemleri dahil et
   const todayEnd = new Date()
   todayEnd.setHours(23, 59, 59, 999) // Bugünü dahil etmek için günün sonuna set et
-  const totalBalance = transactions
-    .filter(t => {
-      const txDate = new Date(t.date)
-      return txDate <= todayEnd
-    })
-    .reduce((acc, t) => acc + (t.type === "gelir" ? t.amount : -t.amount), 0)
+  
+  const filteredForBalance = transactions.filter(t => {
+    const txDate = new Date(t.date)
+    return txDate <= todayEnd
+  })
+  
+  const totalBalance = filteredForBalance.reduce((acc, t) => acc + (t.type === "gelir" ? t.amount : -t.amount), 0)
+  
+  console.log('[Dashboard] Balance calculation:', {
+    totalTransactions: transactions.length,
+    filteredCount: filteredForBalance.length,
+    totalBalance,
+    sampleDates: filteredForBalance.slice(0, 5).map(t => ({ date: t.date, type: t.type, amount: t.amount }))
+  })
   
   // Sadece bu dönem işlemleri
   const periodBalance = periodTransactions.reduce((acc, t) => acc + (t.type === "gelir" ? t.amount : -t.amount), 0)
   
-  // Önceki dönemden kalan bakiye
-  const previousBalance = totalBalance - periodBalance
+  // Önceki dönemden kalan bakiye (dönem başlangıcından önceki toplam bakiye)
+  const previousPeriodEnd = new Date(start)
+  previousPeriodEnd.setDate(previousPeriodEnd.getDate() - 1)
+  previousPeriodEnd.setHours(23, 59, 59, 999)
+  
+  const previousBalance = transactions
+    .filter(t => {
+      const txDate = new Date(t.date)
+      return txDate <= previousPeriodEnd
+    })
+    .reduce((acc, t) => acc + (t.type === "gelir" ? t.amount : -t.amount), 0)
 
     const monthlyData: MonthlyDatum[] = Array.from({ length: 12 }, (_, i) => {
       const month = new Date(currentYear, i, 1).toLocaleString("tr-TR", { month: "long" })
@@ -1179,12 +1196,12 @@ export default function FinanceDashboard() {
                   <FadeIn>
                     <Card className="bg-gradient-to-br from-blue-500/20 to-blue-500/5 border-blue-500/30 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
                       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-muted-foreground">Önceki Dönem</CardTitle>
+                        <CardTitle className="text-sm font-medium text-muted-foreground">Önceki Dönem Bakiyesi</CardTitle>
                         <ArrowUpLeft className="h-4 w-4 text-blue-600" />
                       </CardHeader>
                       <CardContent>
                         <div className="text-3xl font-bold text-foreground">{formatTRY(previousBalance)}</div>
-                        <p className="text-sm text-muted-foreground mt-1">Devir bakiye</p>
+                        <p className="text-sm text-muted-foreground mt-1">Dönem başlangıcı</p>
                       </CardContent>
                     </Card>
                   </FadeIn>

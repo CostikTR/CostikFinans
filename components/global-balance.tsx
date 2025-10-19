@@ -58,8 +58,10 @@ export function GlobalBalance() {
     // Listen for transaction changes event (for immediate UI updates)
     const handleTransactionChange = () => {
       console.log('[GlobalBalance] transactions:changed event received')
-      if (u?.uid && isFirestoreReady()) {
-        listTransactions(u.uid).then((list: any[]) => {
+      // Re-get current user to avoid stale closure
+      const currentUser = auth?.currentUser
+      if (currentUser?.uid && isFirestoreReady()) {
+        listTransactions(currentUser.uid).then((list: any[]) => {
           console.log('[GlobalBalance] Reloaded transactions:', list.length)
           setTransactions(list as Txn[])
         }).catch(() => {})
@@ -67,6 +69,7 @@ export function GlobalBalance() {
         try {
           const raw = localStorage.getItem("transactions")
           const arr: Txn[] = safeJsonParse(raw, []) as any
+          console.log('[GlobalBalance] Reloaded from localStorage:', arr.length)
           setTransactions(arr)
         } catch {
           setTransactions([])
@@ -91,17 +94,19 @@ export function GlobalBalance() {
     const todayEnd = new Date()
     todayEnd.setHours(23, 59, 59, 999)
     
-    const total = transactions
-      .filter(t => {
-        const txDate = new Date(t.date)
-        return txDate <= todayEnd
-      })
-      .reduce((sum, t) => (t.type === "gelir" ? sum + t.amount : sum - t.amount), 0)
+    const filtered = transactions.filter(t => {
+      const txDate = new Date(t.date)
+      return txDate <= todayEnd
+    })
+    
+    const total = filtered.reduce((sum, t) => (t.type === "gelir" ? sum + t.amount : sum - t.amount), 0)
     
     console.log('[GlobalBalance] Total calculated:', { 
       totalTransactions: transactions.length,
-      filteredTransactions: transactions.filter(t => new Date(t.date) <= todayEnd).length,
-      total 
+      filteredTransactions: filtered.length,
+      total,
+      sampleDates: filtered.slice(0, 5).map(t => ({ date: t.date, type: t.type, amount: t.amount })),
+      todayEnd: todayEnd.toISOString()
     })
     return total
   }, [transactions])
