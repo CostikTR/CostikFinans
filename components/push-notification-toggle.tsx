@@ -317,6 +317,7 @@ export function PushNotificationToggleCompact() {
   } = useFCMToken()
 
   const [isEnabled, setIsEnabled] = useState(false)
+  const [isProcessing, setIsProcessing] = useState(false)
 
   useEffect(() => {
     const shouldEnable = !!token && permission === 'granted'
@@ -325,6 +326,11 @@ export function PushNotificationToggleCompact() {
   }, [token, permission])
 
   const handleToggle = async (checked: boolean) => {
+    if (isProcessing) {
+      console.log('[PushToggleCompact] Already processing, ignoring click')
+      return
+    }
+
     console.log('[PushToggleCompact] Toggle clicked:', { checked, user: !!user })
     
     if (!user) {
@@ -332,6 +338,8 @@ export function PushNotificationToggleCompact() {
       return
     }
 
+    setIsProcessing(true)
+    
     try {
       if (checked) {
         console.log('[PushToggleCompact] Requesting permission...')
@@ -346,7 +354,11 @@ export function PushNotificationToggleCompact() {
           // Token kaydı başarılıysa state'i güncelle
           if (result) {
             setIsEnabled(true)
+          } else {
+            console.error('[PushToggleCompact] Token registration failed - no token returned')
           }
+        } else {
+          console.log('[PushToggleCompact] Permission denied')
         }
       } else {
         console.log('[PushToggleCompact] Deleting FCM token...')
@@ -356,6 +368,8 @@ export function PushNotificationToggleCompact() {
     } catch (error) {
       console.error('[PushToggleCompact] Error:', error)
       setIsEnabled(false)
+    } finally {
+      setIsProcessing(false)
     }
   }
 
@@ -393,7 +407,7 @@ export function PushNotificationToggleCompact() {
         id="push-compact"
         checked={isEnabled}
         onCheckedChange={handleToggle}
-        disabled={loading || permission === 'denied'}
+        disabled={loading || permission === 'denied' || isProcessing}
       />
     </div>
   )
