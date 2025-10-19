@@ -458,7 +458,10 @@ export default function FinanceDashboard() {
           await addNotification(user?.uid, { message: `${title}: ${desc}`, type: "info", read: false, timestamp: Date.now() })
           toast({ title, description: desc })
           // ensure header updates immediately
-          try { window.dispatchEvent(new Event("transactions:refresh-request")) } catch {}
+          try { 
+            window.dispatchEvent(new Event("transactions:refresh-request"))
+            window.dispatchEvent(new Event("transactions:changed")) // GlobalBalance için
+          } catch {}
         }
       } catch (error) {
         console.error('Çevrimiçi işlem kaydedilirken hata:', error)
